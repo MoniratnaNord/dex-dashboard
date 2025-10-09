@@ -215,7 +215,7 @@ export default function Positions() {
 							<h2 className="text-xl font-semibold mb-3 text-green-400">
 								Hyperliquid
 							</h2>
-							<div>Overall Realized PNL: {hlPnl.toFixed(4)}</div>
+							{/* <div>Overall Realized PNL: {hlPnl.toFixed(4)}</div> */}
 						</div>
 
 						{hlPositions.filter((p) => Number(p.position.szi) !== 0).length ===
@@ -295,7 +295,7 @@ export default function Positions() {
 							<h2 className="text-xl font-semibold mb-3 text-blue-400">
 								Lighter
 							</h2>
-							<div>Overall Realized PNL: {lighterPnl.toFixed(4)}</div>
+							{/* <div>Overall Realized PNL: {lighterPnl.toFixed(4)}</div> */}
 						</div>
 
 						{ltPositions.filter((p) => Number(p.position) !== 0).length ===
