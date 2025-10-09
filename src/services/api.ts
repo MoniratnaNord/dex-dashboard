@@ -29,8 +29,9 @@ export async function fetchHyperliquidMarkets(): Promise<
 	// json expected shape includes assets/coins metadata; be defensive
 	const assets: any[] = json[0].universe ?? json?.assetCtxs ?? [];
 	const options: PlatformMarketOption[] = assets
-		.map((a: any) => {
+		.map((a: any, i: number) => {
 			const meta: HyperliquidMarketMeta = {
+				index: i,
 				name: a?.name ?? a?.coin ?? "",
 				szDecimals: a?.szDecimals ?? a?.szDecs ?? 0,
 				maxLeverage: a?.maxLeverage ?? 0,
@@ -38,7 +39,8 @@ export async function fetchHyperliquidMarkets(): Promise<
 			return {
 				id: `hl:${meta.name}`,
 				display: meta.name,
-				platform: "hyperliquid",
+				platform: "hyperliquid" as Platform,
+				funding: json[1][meta.index].funding,
 				hyperliquid: meta,
 			};
 		})
@@ -65,7 +67,7 @@ export async function fetchLighterMarkets(): Promise<PlatformMarketOption[]> {
 			return {
 				id: `lt:${meta.market_id}`,
 				display: meta.symbol,
-				platform: "lighter",
+				platform: "lighter" as Platform,
 				lighter: meta,
 			};
 		})
@@ -108,12 +110,14 @@ export async function fetchFundingSeries(
 			.sort((a, b) => a.timestamp - b.timestamp);
 		return { platform, market: coin, points };
 	}
-	console.log(symbolOrId);
+	console.log("Lighter funding request - symbolOrId:", symbolOrId);
 	// lighter
-	const [prefix, idStr] = symbolOrId.includes(":")
+	const [, idStr] = symbolOrId.includes(":")
 		? symbolOrId.split(":")
 		: ["lt", symbolOrId];
 	const marketId = Number(idStr);
+	console.log("Lighter market ID:", marketId);
+
 	const params = new URLSearchParams({
 		market_id: String(marketId),
 		resolution: "1h",
@@ -123,22 +127,33 @@ export async function fetchFundingSeries(
 			: {}),
 		count_back: "1000",
 	});
-	const resp = await fetch(`${LIGHTER_BASE}/fundings?${params.toString()}`);
-	if (!resp.ok) throw new Error("Failed to fetch Lighter funding");
+
+	const url = `${LIGHTER_BASE}/fundings?${params.toString()}`;
+	console.log("Lighter API URL:", url);
+
+	const resp = await fetch(url);
+	if (!resp.ok) {
+		console.error("Lighter API error:", resp.status, resp.statusText);
+		throw new Error(
+			`Failed to fetch Lighter funding: ${resp.status} ${resp.statusText}`
+		);
+	}
 	const json = await resp.json();
-	console.log("checking lighter json", json);
+	console.log("Lighter funding response:", json);
 	const series = Array.isArray(json)
 		? json
 		: json?.fundings ?? json?.data ?? [];
+	console.log("Lighter series data:", series);
 	const points = series
 		.map((p: any) => {
 			const ts = Number(p?.timestamp ?? p?.time ?? 0);
 			const timestamp = ts < 1e12 ? ts * 1000 : ts; // normalize to ms
 			const rate = p?.rate ?? p?.fundingRate ?? 0;
-			const value = (typeof rate === "number" ? rate : Number(rate)) * 100;
+			const value = typeof rate === "number" ? rate : Number(rate);
 			return { timestamp, value };
 		})
 		.sort((a, b) => a.timestamp - b.timestamp);
+	console.log("Lighter processed points:", points);
 	return { platform, market: String(marketId), points };
 }
 

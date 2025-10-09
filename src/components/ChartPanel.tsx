@@ -453,9 +453,15 @@ interface ChartPanelProps {
 	title: string;
 	data: PlatformData[] | OpenInterestPlatform[];
 	type: "funding" | "openInterest";
+	selectedDateRange?: { start: string; end: string };
 }
 
-export default function ChartPanel({ title, data, type }: ChartPanelProps) {
+export default function ChartPanel({
+	title,
+	data,
+	type,
+	selectedDateRange,
+}: ChartPanelProps) {
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 
 	useEffect(() => {
@@ -549,6 +555,11 @@ export default function ChartPanel({ title, data, type }: ChartPanelProps) {
 
 			// data lines
 			data.forEach((platform) => {
+				if (platform.data.length === 0) {
+					console.log(`No data for ${platform.name}`);
+					return;
+				}
+
 				ctx.beginPath();
 				ctx.strokeStyle = platform.color;
 				ctx.lineWidth = 2;
@@ -670,7 +681,10 @@ export default function ChartPanel({ title, data, type }: ChartPanelProps) {
 					<table className="w-full text-sm">
 						<thead>
 							<tr className="text-gray-400 border-b border-gray-800">
-								<th className="text-left py-2 font-medium">Name</th>
+								<th className="text-left py-2 font-medium">Platform</th>
+								<th className="text-right py-2 font-medium text-emerald-400">
+									Selected Range
+								</th>
 								<th className="text-right py-2 font-medium text-emerald-400">
 									Min
 								</th>
@@ -683,26 +697,56 @@ export default function ChartPanel({ title, data, type }: ChartPanelProps) {
 							</tr>
 						</thead>
 						<tbody>
-							{data.map((platform) => (
-								<tr key={platform.name} className="border-b border-gray-800/50">
-									<td className="py-2 flex items-center gap-2">
-										<div
-											className="w-3 h-0.5"
-											style={{ backgroundColor: platform.color }}
-										/>
-										<span className="text-gray-300">{platform.name}</span>
-									</td>
-									<td className="text-right text-gray-300">
-										{formatValue(platform.min)}
-									</td>
-									<td className="text-right text-gray-300">
-										{formatValue(platform.max)}
-									</td>
-									<td className="text-right text-gray-300">
-										{formatValue(platform.mean)}
-									</td>
-								</tr>
-							))}
+							{data.map((platform) => {
+								return (
+									<tr
+										key={platform.name}
+										className="border-b border-gray-800/50"
+									>
+										<td className="py-2 flex items-center gap-2">
+											<div
+												className="w-3 h-0.5"
+												style={{ backgroundColor: platform.color }}
+											/>
+											<span className="text-gray-300">{platform.name}</span>
+										</td>
+										<td className="text-right text-gray-300 text-xs">
+											{selectedDateRange ? (
+												<>
+													{new Date(
+														selectedDateRange.start
+													).toLocaleDateString()}{" "}
+													-{" "}
+													{new Date(selectedDateRange.end).toLocaleDateString()}
+												</>
+											) : (
+												<span className="text-gray-500">No range selected</span>
+											)}
+										</td>
+										<td className="text-right text-gray-300">
+											{platform.data.length > 0 ? (
+												formatValue(platform.min)
+											) : (
+												<span className="text-red-400">No data</span>
+											)}
+										</td>
+										<td className="text-right text-gray-300">
+											{platform.data.length > 0 ? (
+												formatValue(platform.max)
+											) : (
+												<span className="text-red-400">No data</span>
+											)}
+										</td>
+										<td className="text-right text-gray-300">
+											{platform.data.length > 0 ? (
+												formatValue(platform.mean)
+											) : (
+												<span className="text-red-400">No data</span>
+											)}
+										</td>
+									</tr>
+								);
+							})}
 						</tbody>
 					</table>
 				</div>

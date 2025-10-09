@@ -5,12 +5,9 @@ import {
 	ChevronRight,
 	RefreshCw,
 } from "lucide-react";
-import { Platform, PlatformMarketOption } from "../types";
+import { PlatformMarketOption } from "../types";
 
 interface FilterBarProps {
-	platform: Platform;
-	platforms: Platform[];
-	onPlatformChange: (p: Platform) => void;
 	markets: PlatformMarketOption[];
 	selectedMarketId?: string;
 	onMarketChange: (id: string) => void;
@@ -22,9 +19,6 @@ interface FilterBarProps {
 }
 
 export default function FilterBar({
-	platform,
-	platforms,
-	onPlatformChange,
 	markets,
 	selectedMarketId,
 	onMarketChange,
@@ -37,17 +31,7 @@ export default function FilterBar({
 	return (
 		<div className="flex items-center justify-between mb-6">
 			<div className="flex items-center gap-4">
-				<select
-					value={platform}
-					onChange={(e) => onPlatformChange(e.target.value as Platform)}
-					className="bg-[#1f1f1f] text-white px-4 py-2 rounded border border-gray-700 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
-				>
-					{platforms.map((p) => (
-						<option key={p} value={p}>
-							{p}
-						</option>
-					))}
-				</select>
+				<span className="text-gray-400 text-sm">Compare platforms:</span>
 
 				<select
 					value={selectedMarketId}

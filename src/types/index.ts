@@ -44,6 +44,7 @@ export type Platform = "hyperliquid" | "lighter";
 
 // Market types
 export interface HyperliquidMarketMeta {
+	index: number;
 	name: string; // e.g. "ETH"
 	szDecimals: number;
 	maxLeverage: number;
@@ -62,6 +63,7 @@ export interface PlatformMarketOption {
 	id: string; // unique key per platform (e.g. symbol or market_id prefixed)
 	display: string; // user-facing label, e.g. "ETH"
 	platform: Platform;
+	funding: number;
 	// platform specific payloads for later use
 	hyperliquid?: HyperliquidMarketMeta;
 	lighter?: LighterOrderBookMarketMeta;
