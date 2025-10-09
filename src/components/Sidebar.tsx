@@ -26,13 +26,13 @@ export default function Sidebar() {
 					icon={<LayoutGrid size={18} />}
 					label="Dashboards"
 					active={active}
-					onClick={() => navigate("/")}
+					onClick={() => navigate("/dashboard")}
 				/>
 				<NavItem
 					icon={<LayoutGrid size={18} />}
 					label="Positions"
 					active={active}
-					onClick={() => navigate("/positions")}
+					onClick={() => navigate("/")}
 				/>
 			</nav>
 		</div>

@@ -19,8 +19,8 @@ export default function App() {
 			</nav> */}
 			<div className="">
 				<Routes>
-					<Route path="/" element={<Dashboard />} />
-					<Route path="/positions/:address" element={<Positions />} />
+					<Route path="/dashboard" element={<Dashboard />} />
+					<Route path="/" element={<Positions />} />
 				</Routes>
 			</div>
 		</div>
