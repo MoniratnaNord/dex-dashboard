@@ -528,9 +528,7 @@ export default function Positions() {
 												<td className="p-2 border border-gray-700">
 													{f.market}
 												</td>
-												<td className="p-2 border border-gray-700">
-													{f.amount > 0 ? "Long" : "Short"}
-												</td>
+												<td className="p-2 border border-gray-700">{f.side}</td>
 												<td className="p-2 border border-gray-700">
 													{Number(f.amount).toFixed(5)}
 												</td>
@@ -581,9 +579,7 @@ export default function Positions() {
 												<td className="p-2 border border-gray-700">
 													{f.market}
 												</td>
-												<td className="p-2 border border-gray-700">
-													{f.amount > 0 ? "Long" : "Short"}
-												</td>
+												<td className="p-2 border border-gray-700">{f.side}</td>
 												<td className="p-2 border border-gray-700">
 													{Number(f.amount).toFixed(5)}
 												</td>
