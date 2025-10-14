@@ -4,6 +4,7 @@ import {
 	fetchLighterFundingRate,
 	fetchLighterUserPositions,
 	fetchPnl,
+	fetchPnlData,
 	fetchUserFundings,
 	fetchUserTrades,
 } from "../api/positions";
@@ -23,6 +24,7 @@ export default function Positions() {
 	const [ltTrades, setLtTrades] = useState<any[]>([]);
 	const [hlPnl, setHlPnl] = useState(0);
 	const [lighterPnl, setLighterPnl] = useState(0);
+	const [pnlData, setPnlData] = useState<any>(null);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
@@ -36,7 +38,7 @@ export default function Positions() {
 		setHlTrades([]);
 		setLtTrades([]);
 		try {
-			const [hl, lt, fundings, trades, pnl] = await Promise.all([
+			const [hl, lt, fundings, trades, pnl, pnlData] = await Promise.all([
 				fetchHyperliquidUserPositions(
 					"0xA2a95178FFED95ce9a2278bcA9bB5bef8C0DC95C"
 				),
@@ -44,6 +46,7 @@ export default function Positions() {
 				fetchUserFundings("0xA2a95178FFED95ce9a2278bcA9bB5bef8C0DC95C"),
 				fetchUserTrades("0xA2a95178FFED95ce9a2278bcA9bB5bef8C0DC95C"),
 				fetchPnl("0xA2a95178FFED95ce9a2278bcA9bB5bef8C0DC95C"),
+				fetchPnlData("0xA2a95178FFED95ce9a2278bcA9bB5bef8C0DC95C"),
 			]);
 			setHlPositions(hl);
 			setLtPositions(lt);
@@ -51,6 +54,7 @@ export default function Positions() {
 			setLtFundings(fundings.data.lighter_funding || []);
 			setHlTrades(trades.data.hyperliquid_trades || []);
 			setLtTrades(trades.data.lighter_trades || []);
+			setPnlData(pnlData);
 			const hlTotal = sumRealizedPnL(pnl.data.hl);
 			const lighterTotal = sumRealizedPnL(pnl.data.lighter);
 			setHlPnl(Number(hlTotal));
@@ -61,8 +65,8 @@ export default function Positions() {
 			setLoading(false);
 		}
 	};
-	console.log("checking pnl", hlPnl, lighterPnl);
-	const sumRealizedPnL = (obj) =>
+	console.log("checking pnl", pnlData);
+	const sumRealizedPnL = (obj: any) =>
 		Object.values(obj).reduce(
 			(sum, token: any) => sum + (token.realized_pnl_all_time || 0),
 			0
@@ -209,12 +213,93 @@ export default function Positions() {
 
 					{error && <p className="text-red-500 mb-4">{error}</p>}
 
-					{/* ---------------- Hyperliquid ---------------- */}
+					{/* ---------------- Overall Summary ---------------- */}
 					<section className="mb-10">
-						<div className="flex justify-between">
+						<div className="mb-10">
+							<h2 className="text-xl font-semibold mb-3 text-green-400">
+								Overall Summary
+							</h2>
+							{loading ? (
+								Array(3)
+									.fill(0)
+									.map((_, i) => (
+										<div
+											key={i}
+											className="h-6 bg-gray-800 rounded animate-pulse col-span-1"
+										></div>
+									))
+							) : (
+								<div className="grid grid-cols-3 gap-3 mb-4 text-center text-green-400 font-bold">
+									{/* <div className="text-gray-500">Overall Funding</div> */}
+									<div className="text-green-400">Total Deposit</div>
+									<div className="text-green-400">Total PNL%</div>
+									<div className="text-green-400">Total APR%</div>
+									<div className="text-green-400">
+										{pnlData &&
+											Number(
+												Number(pnlData.data.hyperliquid.total_deposits) +
+													Number(pnlData.data.lighter.total_deposits)
+											).toFixed(2)}
+									</div>
+									<div className="text-green-400">
+										{pnlData &&
+											Number(pnlData.data.total_pnl_percent).toFixed(2)}
+									</div>
+									<div className="text-green-400">
+										{pnlData && Number(pnlData.data.total_apr).toFixed(2)}
+									</div>
+								</div>
+							)}
+						</div>
+					</section>
+					<section className="mb-10">
+						<div className="mb-10">
 							<h2 className="text-xl font-semibold mb-3 text-green-400">
 								Hyperliquid
 							</h2>
+							{loading ? (
+								Array(5)
+									.fill(0)
+									.map((_, i) => (
+										<div
+											key={i}
+											className="h-6 bg-gray-800 rounded animate-pulse col-span-1"
+										></div>
+									))
+							) : (
+								<div className="grid grid-cols-5 gap-3 mb-4 text-center text-green-400 font-bold">
+									{/* <div className="text-gray-500">Overall Funding</div> */}
+									<div className="text-green-400">Total Deposit</div>
+									<div className="text-green-400">Current Balance</div>
+									<div className="text-green-400">PNL</div>
+									<div className="text-green-400">PNL%</div>
+									<div className="text-green-400">APR</div>
+									<div className="text-green-400">
+										{pnlData &&
+											Number(pnlData.data.hyperliquid.total_deposits).toFixed(
+												2
+											)}
+									</div>
+									<div className="text-green-400">
+										{pnlData &&
+											Number(pnlData.data.hyperliquid.account_balance).toFixed(
+												2
+											)}
+									</div>
+									<div className="text-green-400">
+										{pnlData && Number(pnlData.data.hyperliquid.pnl).toFixed(2)}
+									</div>
+									<div className="text-green-400">
+										{pnlData &&
+											Number(pnlData.data.hyperliquid.pnl_percent).toFixed(2)}
+									</div>
+									<div className="text-green-400">
+										{pnlData && Number(pnlData.data.hyperliquid.apr).toFixed(2)}
+										%
+									</div>
+								</div>
+							)}
+
 							{/* <div>Overall Realized PNL: {hlPnl.toFixed(4)}</div> */}
 						</div>
 
@@ -291,10 +376,48 @@ export default function Positions() {
 
 					{/* ---------------- Lighter ---------------- */}
 					<section>
-						<div className="flex justify-between">
+						<div className="mb-10">
 							<h2 className="text-xl font-semibold mb-3 text-blue-400">
 								Lighter
 							</h2>
+							{loading ? (
+								Array(5)
+									.fill(0)
+									.map((_, i) => (
+										<div
+											key={i}
+											className="h-6 bg-gray-800 rounded animate-pulse col-span-1"
+										></div>
+									))
+							) : (
+								<div className="grid grid-cols-5 gap-3 mb-4 text-center text-green-400 font-bold">
+									{/* <div className="text-gray-500">Overall Funding</div> */}
+									<div className="text-green-400">Total Deposit</div>
+									<div className="text-green-400">Current Balance</div>
+									<div className="text-green-400">PNL</div>
+									<div className="text-green-400">PNL%</div>
+									<div className="text-green-400">APR</div>
+									<div className="text-green-400">
+										{pnlData &&
+											Number(pnlData.data.lighter.total_deposits).toFixed(2)}
+									</div>
+									<div className="text-green-400">
+										{pnlData &&
+											Number(pnlData.data.lighter.account_balance).toFixed(2)}
+									</div>
+									<div className="text-green-400">
+										{pnlData && Number(pnlData.data.lighter.pnl).toFixed(2)}
+									</div>
+									<div className="text-green-400">
+										{pnlData &&
+											Number(pnlData.data.lighter.pnl_percent).toFixed(2)}
+									</div>
+									<div className="text-green-400">
+										{pnlData && Number(pnlData.data.lighter.apr).toFixed(2)}%
+									</div>
+								</div>
+							)}
+
 							{/* <div>Overall Realized PNL: {lighterPnl.toFixed(4)}</div> */}
 						</div>
 
