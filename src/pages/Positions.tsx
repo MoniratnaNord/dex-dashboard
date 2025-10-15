@@ -12,9 +12,11 @@ import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 import { fetchHyperliquidMarkets, fetchLighterMarkets } from "../services/api";
 import { useLocation, useParams } from "react-router-dom";
+import { isAddress } from "ethers";
 
 export default function Positions() {
 	const params = useParams();
+	// console.log("checking params", params);
 	const [address, setAddress] = useState("");
 	const [hlPositions, setHlPositions] = useState<any[]>([]);
 	const [ltPositions, setLtPositions] = useState<any[]>([]);
@@ -27,6 +29,7 @@ export default function Positions() {
 	const [pnlData, setPnlData] = useState<any>(null);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [invalidAddress, setInvalidAddress] = useState(false);
 
 	const handleFetch = async () => {
 		setError(null);
@@ -39,14 +42,12 @@ export default function Positions() {
 		setLtTrades([]);
 		try {
 			const [hl, lt, fundings, trades, pnl, pnlData] = await Promise.all([
-				fetchHyperliquidUserPositions(
-					"0xA2a95178FFED95ce9a2278bcA9bB5bef8C0DC95C"
-				),
-				fetchLighterUserPositions("0xA2a95178FFED95ce9a2278bcA9bB5bef8C0DC95C"),
-				fetchUserFundings("0xA2a95178FFED95ce9a2278bcA9bB5bef8C0DC95C"),
-				fetchUserTrades("0xA2a95178FFED95ce9a2278bcA9bB5bef8C0DC95C"),
-				fetchPnl("0xA2a95178FFED95ce9a2278bcA9bB5bef8C0DC95C"),
-				fetchPnlData("0xA2a95178FFED95ce9a2278bcA9bB5bef8C0DC95C"),
+				fetchHyperliquidUserPositions(address),
+				fetchLighterUserPositions(address),
+				fetchUserFundings(address),
+				fetchUserTrades(address),
+				fetchPnl(address),
+				fetchPnlData(address),
 			]);
 			setHlPositions(hl);
 			setLtPositions(lt);
@@ -73,8 +74,20 @@ export default function Positions() {
 		);
 	const formatTimestamp = (ts: number) => new Date(ts).toLocaleString();
 	useEffect(() => {
-		handleFetch();
-	}, []);
+		if (params.address) {
+			const isValidAddress = isAddress(params.address);
+			if (isValidAddress) {
+				setAddress(params.address);
+			} else {
+				setInvalidAddress(true);
+			}
+		}
+	}, [params]);
+	useEffect(() => {
+		if (address && params.address) {
+			handleFetch();
+		}
+	}, [address]);
 
 	const getTokenWiseFunding = (fundings: any[]) => {
 		const summary: Record<string, { paid: number; earned: number }> = {};
@@ -196,661 +209,738 @@ export default function Positions() {
 						<div
 							// type="text"
 							// placeholder="Enter wallet address (0x...)"
-							// value={"0xA2a95178FFED95ce9a2278bcA9bB5bef8C0DC95C"}
+							// value={address}
 							// onChange={(e) => setAddress(e.target.value)}
 							className="bg-[#1f1f1f]  rounded-lg px-4 py-2 flex-1 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
 						>
-							Address: {"0xA2a95178FFED95ce9a2278bcA9bB5bef8C0DC95C"}{" "}
+							Address: {address}{" "}
 						</div>
-						<button
-							onClick={handleFetch}
-							disabled={true}
-							className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg disabled:opacity-50"
-						>
-							{loading ? "Fetching..." : "Fetch Positions"}
-						</button>
+						{loading ? (
+							<span className="flex items-center gap-2 font-semibold text-blue-400">
+								<span>Fetching</span>
+								<span className="flex gap-1">
+									<span
+										className="animate-bounce"
+										style={{ animationDelay: "0ms" }}
+									>
+										.
+									</span>
+									<span
+										className="animate-bounce"
+										style={{ animationDelay: "150ms" }}
+									>
+										.
+									</span>
+									<span
+										className="animate-bounce"
+										style={{ animationDelay: "300ms" }}
+									>
+										.
+									</span>
+								</span>
+							</span>
+						) : (
+							<span className="flex items-center gap-2 font-semibold text-green-400">
+								<span>Fetched</span>
+								<svg
+									className="w-5 h-5 text-green-400"
+									fill="none"
+									stroke="currentColor"
+									strokeWidth="2"
+									viewBox="0 0 24 24"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										d="M5 13l4 4L19 7"
+									/>
+								</svg>
+							</span>
+						)}
 					</div>
 
 					{error && <p className="text-red-500 mb-4">{error}</p>}
-
-					{/* ---------------- Overall Summary ---------------- */}
-					<section className="mb-10">
-						<div className="mb-10">
-							<h2 className="text-xl font-semibold mb-3 text-green-400">
-								Overall Summary
-							</h2>
-							{loading ? (
-								Array(3)
-									.fill(0)
-									.map((_, i) => (
-										<div
-											key={i}
-											className="h-6 bg-gray-800 rounded animate-pulse col-span-1"
-										></div>
-									))
-							) : (
-								<div className="grid grid-cols-3 gap-3 mb-4 text-center text-green-400 font-bold">
-									{/* <div className="text-gray-500">Overall Funding</div> */}
-									<div className="text-green-400">Total Deposit</div>
-									<div className="text-green-400">Total PNL%</div>
-									<div className="text-green-400">Total APR%</div>
-									<div className="text-green-400">
-										{pnlData &&
-											Number(
-												Number(pnlData.data.hyperliquid.total_deposits) +
-													Number(pnlData.data.lighter.total_deposits)
-											).toFixed(2)}
-									</div>
-									<div className="text-green-400">
-										{pnlData &&
-											Number(pnlData.data.total_pnl_percent).toFixed(2)}
-									</div>
-									<div className="text-green-400">
-										{pnlData && Number(pnlData.data.total_apr).toFixed(2)}
-									</div>
+					{invalidAddress && (
+						<p className="text-red-500 mb-4">
+							The address entered is invalid. Please enter a valid address.
+						</p>
+					)}
+					{!invalidAddress && pnlData ? (
+						<>
+							<section className="mb-10">
+								<div className="mb-10">
+									<h2 className="text-xl font-semibold mb-3 text-green-400">
+										Overall Summary
+									</h2>
+									{loading ? (
+										Array(3)
+											.fill(0)
+											.map((_, i) => (
+												<div
+													key={i}
+													className="h-6 bg-gray-800 rounded animate-pulse col-span-1"
+												></div>
+											))
+									) : (
+										<div className="grid grid-cols-3 gap-3 mb-4 text-center text-green-400 font-bold">
+											{/* <div className="text-gray-500">Overall Funding</div> */}
+											<div className="text-green-400">Total Deposit</div>
+											<div className="text-green-400">Total PNL%</div>
+											<div className="text-green-400">Total APR%</div>
+											<div className="text-green-400">
+												{pnlData &&
+													Number(
+														Number(pnlData.data.hyperliquid.total_deposits) +
+															Number(pnlData.data.lighter.total_deposits)
+													).toFixed(2)}
+											</div>
+											<div className="text-green-400">
+												{pnlData &&
+													Number(pnlData.data.total_pnl_percent).toFixed(2)}
+											</div>
+											<div className="text-green-400">
+												{pnlData && Number(pnlData.data.total_apr).toFixed(2)}
+											</div>
+										</div>
+									)}
 								</div>
-							)}
-						</div>
-					</section>
-					<section className="mb-10">
-						<div className="mb-10">
-							<h2 className="text-xl font-semibold mb-3 text-green-400">
-								Hyperliquid
-							</h2>
-							{loading ? (
-								Array(5)
-									.fill(0)
-									.map((_, i) => (
-										<div
-											key={i}
-											className="h-6 bg-gray-800 rounded animate-pulse col-span-1"
-										></div>
-									))
-							) : (
-								<div className="grid grid-cols-5 gap-3 mb-4 text-center text-green-400 font-bold">
-									{/* <div className="text-gray-500">Overall Funding</div> */}
-									<div className="text-green-400">Total Deposit</div>
-									<div className="text-green-400">Current Balance</div>
-									<div className="text-green-400">PNL</div>
-									<div className="text-green-400">PNL%</div>
-									<div className="text-green-400">APR</div>
-									<div className="text-green-400">
-										{pnlData &&
-											Number(pnlData.data.hyperliquid.total_deposits).toFixed(
-												2
-											)}
-									</div>
-									<div className="text-green-400">
-										{pnlData &&
-											Number(pnlData.data.hyperliquid.account_balance).toFixed(
-												2
-											)}
-									</div>
-									<div className="text-green-400">
-										{pnlData && Number(pnlData.data.hyperliquid.pnl).toFixed(2)}
-									</div>
-									<div className="text-green-400">
-										{pnlData &&
-											Number(pnlData.data.hyperliquid.pnl_percent).toFixed(2)}
-									</div>
-									<div className="text-green-400">
-										{pnlData && Number(pnlData.data.hyperliquid.apr).toFixed(2)}
-										%
-									</div>
+							</section>
+							<section className="mb-10">
+								<div className="mb-10">
+									<h2 className="text-xl font-semibold mb-3 text-green-400">
+										Hyperliquid
+									</h2>
+									{loading ? (
+										Array(5)
+											.fill(0)
+											.map((_, i) => (
+												<div
+													key={i}
+													className="h-6 bg-gray-800 rounded animate-pulse col-span-1"
+												></div>
+											))
+									) : (
+										<div className="grid grid-cols-5 gap-3 mb-4 text-center text-green-400 font-bold">
+											{/* <div className="text-gray-500">Overall Funding</div> */}
+											<div className="text-green-400">Total Deposit</div>
+											<div className="text-green-400">Current Balance</div>
+											<div className="text-green-400">PNL</div>
+											<div className="text-green-400">PNL%</div>
+											<div className="text-green-400">APR</div>
+											<div className="text-green-400">
+												{pnlData &&
+													Number(
+														pnlData.data.hyperliquid.total_deposits
+													).toFixed(2)}
+											</div>
+											<div className="text-green-400">
+												{pnlData &&
+													Number(
+														pnlData.data.hyperliquid.account_balance
+													).toFixed(2)}
+											</div>
+											<div className="text-green-400">
+												{pnlData &&
+													Number(pnlData.data.hyperliquid.pnl).toFixed(2)}
+											</div>
+											<div className="text-green-400">
+												{pnlData &&
+													Number(pnlData.data.hyperliquid.pnl_percent).toFixed(
+														2
+													)}
+											</div>
+											<div className="text-green-400">
+												{pnlData &&
+													Number(pnlData.data.hyperliquid.apr).toFixed(2)}
+												%
+											</div>
+										</div>
+									)}
+
+									{/* <div>Overall Realized PNL: {hlPnl.toFixed(4)}</div> */}
 								</div>
-							)}
 
-							{/* <div>Overall Realized PNL: {hlPnl.toFixed(4)}</div> */}
-						</div>
-
-						{hlPositions.filter((p) => Number(p.position.szi) !== 0).length ===
-						0 ? (
-							<p className="text-gray-500">No active positions found.</p>
-						) : (
-							<div className="overflow-x-auto">
-								<table className="w-full border-collapse border border-gray-700">
-									<thead>
-										<tr className="bg-gray-800 text-left">
-											<th className="p-2 border border-gray-700">Symbol</th>
-											<th className="p-2 border border-gray-700">
-												Entry Price
-											</th>
-											<th className="p-2 border border-gray-700">Size</th>
-											<th className="p-2 border border-gray-700">Value</th>
-											<th className="p-2 border border-gray-700">ROE</th>
-											<th className="p-2 border border-gray-700">
-												Unrealized PnL
-											</th>
-											<th className="p-2 border border-gray-700">
-												Liquidation Price
-											</th>
-											<th className="p-2 border border-gray-700">
-												Funding Rate
-											</th>
-										</tr>
-									</thead>
-									<tbody>
-										{hlPositions
-											.filter((p) => Number(p.position.szi) !== 0)
-											.map((p, i) => (
-												<tr key={i} className="hover:bg-gray-700">
-													<td className="p-2 border border-gray-700">
-														{p.position.coin}
-													</td>
-													<td className="p-2 border border-gray-700">
-														{p.position.entryPx}
-													</td>
-													<td className="p-2 border border-gray-700">
-														{p.position.szi}
-													</td>
-													<td className="p-2 border border-gray-700">
-														{p.position.positionValue}
-													</td>
-													<td className="p-2 border border-gray-700">
-														{(Number(p.position.returnOnEquity) * 100).toFixed(
-															2
-														)}
-														%
-													</td>
-													<td className="p-2 border border-gray-700">
-														{p.position.unrealizedPnl}
-													</td>
-													<td className="p-2 border border-gray-700">
-														{p.position.liquidationPx}
-													</td>
-													<td className="p-2 border border-gray-700">
-														{Number(
-															Number(
-																fundingMap[p.position.coin.toLowerCase()]
-															) * 100
-														).toFixed(4)}{" "}
-														%
-													</td>
+								{hlPositions.filter((p) => Number(p.position.szi) !== 0)
+									.length === 0 ? (
+									<p className="text-gray-500">No active positions found.</p>
+								) : (
+									<div className="overflow-x-auto">
+										<table className="w-full border-collapse border border-gray-700">
+											<thead>
+												<tr className="bg-gray-800 text-left">
+													<th className="p-2 border border-gray-700">Symbol</th>
+													<th className="p-2 border border-gray-700">
+														Entry Price
+													</th>
+													<th className="p-2 border border-gray-700">Size</th>
+													<th className="p-2 border border-gray-700">Value</th>
+													<th className="p-2 border border-gray-700">ROE</th>
+													<th className="p-2 border border-gray-700">
+														Unrealized PnL
+													</th>
+													<th className="p-2 border border-gray-700">
+														Liquidation Price
+													</th>
+													<th className="p-2 border border-gray-700">
+														Funding Rate
+													</th>
 												</tr>
-											))}
-									</tbody>
-								</table>
-							</div>
-						)}
-					</section>
+											</thead>
+											<tbody>
+												{hlPositions
+													.filter((p) => Number(p.position.szi) !== 0)
+													.map((p, i) => (
+														<tr key={i} className="hover:bg-gray-700">
+															<td className="p-2 border border-gray-700">
+																{p.position.coin}
+															</td>
+															<td className="p-2 border border-gray-700">
+																{p.position.entryPx}
+															</td>
+															<td className="p-2 border border-gray-700">
+																{p.position.szi}
+															</td>
+															<td className="p-2 border border-gray-700">
+																{p.position.positionValue}
+															</td>
+															<td className="p-2 border border-gray-700">
+																{(
+																	Number(p.position.returnOnEquity) * 100
+																).toFixed(2)}
+																%
+															</td>
+															<td className="p-2 border border-gray-700">
+																{p.position.unrealizedPnl}
+															</td>
+															<td className="p-2 border border-gray-700">
+																{p.position.liquidationPx}
+															</td>
+															<td className="p-2 border border-gray-700">
+																{Number(
+																	Number(
+																		fundingMap[p.position.coin.toLowerCase()]
+																	) * 100
+																).toFixed(4)}{" "}
+																%
+															</td>
+														</tr>
+													))}
+											</tbody>
+										</table>
+									</div>
+								)}
+							</section>
 
-					{/* ---------------- Lighter ---------------- */}
-					<section>
-						<div className="mb-10">
-							<h2 className="text-xl font-semibold mb-3 text-blue-400">
-								Lighter
-							</h2>
-							{loading ? (
-								Array(5)
-									.fill(0)
-									.map((_, i) => (
-										<div
-											key={i}
-											className="h-6 bg-gray-800 rounded animate-pulse col-span-1"
-										></div>
-									))
-							) : (
-								<div className="grid grid-cols-5 gap-3 mb-4 text-center text-green-400 font-bold">
-									{/* <div className="text-gray-500">Overall Funding</div> */}
-									<div className="text-green-400">Total Deposit</div>
-									<div className="text-green-400">Current Balance</div>
-									<div className="text-green-400">PNL</div>
-									<div className="text-green-400">PNL%</div>
-									<div className="text-green-400">APR</div>
-									<div className="text-green-400">
-										{pnlData &&
-											Number(pnlData.data.lighter.total_deposits).toFixed(2)}
-									</div>
-									<div className="text-green-400">
-										{pnlData &&
-											Number(pnlData.data.lighter.account_balance).toFixed(2)}
-									</div>
-									<div className="text-green-400">
-										{pnlData && Number(pnlData.data.lighter.pnl).toFixed(2)}
-									</div>
-									<div className="text-green-400">
-										{pnlData &&
-											Number(pnlData.data.lighter.pnl_percent).toFixed(2)}
-									</div>
-									<div className="text-green-400">
-										{pnlData && Number(pnlData.data.lighter.apr).toFixed(2)}%
-									</div>
+							{/* ---------------- Lighter ---------------- */}
+							<section>
+								<div className="mb-10">
+									<h2 className="text-xl font-semibold mb-3 text-blue-400">
+										Lighter
+									</h2>
+									{loading ? (
+										Array(5)
+											.fill(0)
+											.map((_, i) => (
+												<div
+													key={i}
+													className="h-6 bg-gray-800 rounded animate-pulse col-span-1"
+												></div>
+											))
+									) : (
+										<div className="grid grid-cols-5 gap-3 mb-4 text-center text-green-400 font-bold">
+											{/* <div className="text-gray-500">Overall Funding</div> */}
+											<div className="text-green-400">Total Deposit</div>
+											<div className="text-green-400">Current Balance</div>
+											<div className="text-green-400">PNL</div>
+											<div className="text-green-400">PNL%</div>
+											<div className="text-green-400">APR</div>
+											<div className="text-green-400">
+												{pnlData &&
+													Number(pnlData.data.lighter.total_deposits).toFixed(
+														2
+													)}
+											</div>
+											<div className="text-green-400">
+												{pnlData &&
+													Number(pnlData.data.lighter.account_balance).toFixed(
+														2
+													)}
+											</div>
+											<div className="text-green-400">
+												{pnlData && Number(pnlData.data.lighter.pnl).toFixed(2)}
+											</div>
+											<div className="text-green-400">
+												{pnlData &&
+													Number(pnlData.data.lighter.pnl_percent).toFixed(2)}
+											</div>
+											<div className="text-green-400">
+												{pnlData && Number(pnlData.data.lighter.apr).toFixed(2)}
+												%
+											</div>
+										</div>
+									)}
+
+									{/* <div>Overall Realized PNL: {lighterPnl.toFixed(4)}</div> */}
 								</div>
-							)}
 
-							{/* <div>Overall Realized PNL: {lighterPnl.toFixed(4)}</div> */}
-						</div>
-
-						{ltPositions.filter((p) => Number(p.position) !== 0).length ===
-						0 ? (
-							<p className="text-gray-500">No active positions found.</p>
-						) : (
-							<div className="overflow-x-auto">
-								<table className="w-full border-collapse border border-gray-700">
-									<thead>
-										<tr className="bg-gray-800 text-left">
-											<th className="p-2 border border-gray-700">Symbol</th>
-											<th className="p-2 border border-gray-700">
-												Entry Price
-											</th>
-											<th className="p-2 border border-gray-700">Size</th>
-											<th className="p-2 border border-gray-700">Value</th>
-											{/* <th className="p-2 border border-gray-700">ROE</th> */}
-											<th className="p-2 border border-gray-700">
-												Unrealized PnL
-											</th>
-											<th className="p-2 border border-gray-700">
-												Liquidation Price
-											</th>
-											<th className="p-2 border border-gray-700">
-												Funding Rate
-											</th>
-										</tr>
-									</thead>
-									<tbody>
-										{ltPositions
-											.filter((p) => Number(p.position) !== 0)
-											.map((p, i) => {
-												const roe =
-													Number(p.position_value) !== 0
-														? (
-																(Number(p.unrealized_pnl) /
-																	Number(p.position_value)) *
-																100
-														  ).toFixed(2)
-														: "0.00";
-												return (
-													<tr key={i} className="hover:bg-gray-700">
-														<td className="p-2 border border-gray-700">
-															{p.symbol}
-														</td>
-														<td className="p-2 border border-gray-700">
-															{p.avg_entry_price}
-														</td>
-														<td className="p-2 border border-gray-700">
-															{p.position}
-														</td>
-														<td className="p-2 border border-gray-700">
-															{p.position_value}
-														</td>
-														{/* <td className="p-2 border border-gray-700">
+								{ltPositions.filter((p) => Number(p.position) !== 0).length ===
+								0 ? (
+									<p className="text-gray-500">No active positions found.</p>
+								) : (
+									<div className="overflow-x-auto">
+										<table className="w-full border-collapse border border-gray-700">
+											<thead>
+												<tr className="bg-gray-800 text-left">
+													<th className="p-2 border border-gray-700">Symbol</th>
+													<th className="p-2 border border-gray-700">
+														Entry Price
+													</th>
+													<th className="p-2 border border-gray-700">Size</th>
+													<th className="p-2 border border-gray-700">Value</th>
+													{/* <th className="p-2 border border-gray-700">ROE</th> */}
+													<th className="p-2 border border-gray-700">
+														Unrealized PnL
+													</th>
+													<th className="p-2 border border-gray-700">
+														Liquidation Price
+													</th>
+													<th className="p-2 border border-gray-700">
+														Funding Rate
+													</th>
+												</tr>
+											</thead>
+											<tbody>
+												{ltPositions
+													.filter((p) => Number(p.position) !== 0)
+													.map((p, i) => {
+														const roe =
+															Number(p.position_value) !== 0
+																? (
+																		(Number(p.unrealized_pnl) /
+																			Number(p.position_value)) *
+																		100
+																  ).toFixed(2)
+																: "0.00";
+														return (
+															<tr key={i} className="hover:bg-gray-700">
+																<td className="p-2 border border-gray-700">
+																	{p.symbol}
+																</td>
+																<td className="p-2 border border-gray-700">
+																	{p.avg_entry_price}
+																</td>
+																<td className="p-2 border border-gray-700">
+																	{p.position}
+																</td>
+																<td className="p-2 border border-gray-700">
+																	{p.position_value}
+																</td>
+																{/* <td className="p-2 border border-gray-700">
 															{roe}%
 														</td> */}
-														<td className="p-2 border border-gray-700">
-															{p.unrealized_pnl}
-														</td>
-														<td className="p-2 border border-gray-700">
-															{p.liquidation_price}
-														</td>
-														{/* <td className="p-2 border border-gray-700">
+																<td className="p-2 border border-gray-700">
+																	{p.unrealized_pnl}
+																</td>
+																<td className="p-2 border border-gray-700">
+																	{p.liquidation_price}
+																</td>
+																{/* <td className="p-2 border border-gray-700">
 															{calculateAprLt(p.symbol)}
 														</td> */}
-														<LighterFundingRateCell symbol={p.symbol} />
+																<LighterFundingRateCell symbol={p.symbol} />
+															</tr>
+														);
+													})}
+											</tbody>
+										</table>
+									</div>
+								)}
+							</section>
+
+							{/* ---------------- Hyperliquid Token-wise Funding ---------------- */}
+							<section className="mb-10">
+								<h2 className="text-xl font-semibold mt-10 mb-3 text-green-400">
+									Hyperliquid Funding Summary (Token-wise)
+								</h2>
+								<div className="grid grid-cols-3 gap-4 mb-4 text-center text-green-400 font-bold">
+									{/* <div className="text-gray-500">Overall Funding</div> */}
+									<div className="text-green-400">Total Funding Earned</div>
+									<div className="text-green-400">Total Funding Paid</div>
+									<div className="text-green-400">Net Funding</div>
+									<div className="text-green-400">
+										{overallFunding(hlFundings).totalFundingEarned}
+									</div>
+									<div className="text-green-400">
+										{overallFunding(hlFundings).totalFundingPaid}
+									</div>
+									<div className="text-green-400">
+										{overallFunding(hlFundings).netFunding}
+									</div>
+								</div>
+								{hlFundings.length === 0 ? (
+									<p className="text-gray-500">No funding data available.</p>
+								) : (
+									<div className="overflow-y-auto max-h-[400px] border border-gray-700 rounded">
+										<table className="w-full border-collapse">
+											<thead className="bg-gray-800 sticky top-0">
+												<tr>
+													<th className="p-2 border border-gray-700">Token</th>
+													<th className="p-2 border border-gray-700">
+														Funding Paid
+													</th>
+													<th className="p-2 border border-gray-700">
+														Funding Earned
+													</th>
+													<th className="p-2 border border-gray-700">
+														Net Funding
+													</th>
+												</tr>
+											</thead>
+											<tbody>
+												{getTokenWiseFunding(hlFundings).map((f, i) => (
+													<tr key={i} className="hover:bg-gray-700">
+														<td className="p-2 border border-gray-700">
+															{f.token}
+														</td>
+														<td className="p-2 border border-gray-700">
+															{f.fundingPaid}
+														</td>
+														<td className="p-2 border border-gray-700">
+															{f.fundingEarned}
+														</td>
+														<td className="p-2 border border-gray-700">
+															{f.netFunding}
+														</td>
 													</tr>
-												);
-											})}
-									</tbody>
-								</table>
-							</div>
-						)}
-					</section>
+												))}
+											</tbody>
+										</table>
+									</div>
+								)}
+							</section>
 
-					{/* ---------------- Hyperliquid Token-wise Funding ---------------- */}
-					<section className="mb-10">
-						<h2 className="text-xl font-semibold mt-10 mb-3 text-green-400">
-							Hyperliquid Funding Summary (Token-wise)
-						</h2>
-						<div className="grid grid-cols-3 gap-4 mb-4 text-center text-green-400 font-bold">
-							{/* <div className="text-gray-500">Overall Funding</div> */}
-							<div className="text-green-400">Total Funding Earned</div>
-							<div className="text-green-400">Total Funding Paid</div>
-							<div className="text-green-400">Net Funding</div>
-							<div className="text-green-400">
-								{overallFunding(hlFundings).totalFundingEarned}
-							</div>
-							<div className="text-green-400">
-								{overallFunding(hlFundings).totalFundingPaid}
-							</div>
-							<div className="text-green-400">
-								{overallFunding(hlFundings).netFunding}
-							</div>
-						</div>
-						{hlFundings.length === 0 ? (
-							<p className="text-gray-500">No funding data available.</p>
-						) : (
-							<div className="overflow-y-auto max-h-[400px] border border-gray-700 rounded">
-								<table className="w-full border-collapse">
-									<thead className="bg-gray-800 sticky top-0">
-										<tr>
-											<th className="p-2 border border-gray-700">Token</th>
-											<th className="p-2 border border-gray-700">
-												Funding Paid
-											</th>
-											<th className="p-2 border border-gray-700">
-												Funding Earned
-											</th>
-											<th className="p-2 border border-gray-700">
-												Net Funding
-											</th>
-										</tr>
-									</thead>
-									<tbody>
-										{getTokenWiseFunding(hlFundings).map((f, i) => (
-											<tr key={i} className="hover:bg-gray-700">
-												<td className="p-2 border border-gray-700">
-													{f.token}
-												</td>
-												<td className="p-2 border border-gray-700">
-													{f.fundingPaid}
-												</td>
-												<td className="p-2 border border-gray-700">
-													{f.fundingEarned}
-												</td>
-												<td className="p-2 border border-gray-700">
-													{f.netFunding}
-												</td>
+							{/* ---------------- Lighter Token-wise Funding ---------------- */}
+							<section className="mb-10">
+								<h2 className="text-xl font-semibold mb-3 text-blue-400">
+									Lighter Funding Summary (Token-wise)
+								</h2>
+								<div className="grid grid-cols-3 gap-4 mb-4 text-center text-green-400 font-bold">
+									{/* <div className="text-gray-500">Overall Funding</div> */}
+									<div className="text-green-400">Total Funding Earned</div>
+									<div className="text-green-400">Total Funding Paid</div>
+									<div className="text-green-400">Net Funding</div>
+									<div className="text-green-400">
+										{overallFunding(ltFundings).totalFundingEarned}
+									</div>
+									<div className="text-green-400">
+										{overallFunding(ltFundings).totalFundingPaid}
+									</div>
+									<div className="text-green-400">
+										{overallFunding(ltFundings).netFunding}
+									</div>
+								</div>
+								{ltFundings.length === 0 ? (
+									<p className="text-gray-500">No funding data available.</p>
+								) : (
+									<div className="overflow-y-auto max-h-[400px] border border-gray-700 rounded mb-4">
+										<table className="w-full border-collapse">
+											<thead className="bg-gray-800 sticky top-0">
+												<tr>
+													<th className="p-2 border border-gray-700">Token</th>
+													<th className="p-2 border border-gray-700">
+														Funding Paid
+													</th>
+													<th className="p-2 border border-gray-700">
+														Funding Earned
+													</th>
+													<th className="p-2 border border-gray-700">
+														Net Funding
+													</th>
+												</tr>
+											</thead>
+											<tbody>
+												{getTokenWiseFunding(ltFundings).map((f, i) => (
+													<tr key={i} className="hover:bg-gray-700">
+														<td className="p-2 border border-gray-700">
+															{f.token}
+														</td>
+														<td className="p-2 border border-gray-700">
+															{f.fundingPaid}
+														</td>
+														<td className="p-2 border border-gray-700">
+															{f.fundingEarned}
+														</td>
+														<td className="p-2 border border-gray-700">
+															{f.netFunding}
+														</td>
+													</tr>
+												))}
+											</tbody>
+										</table>
+									</div>
+								)}
+							</section>
+
+							{/* ---------------- Hyperliquid Fundings ---------------- */}
+							<section className="mb-10">
+								<h2 className="text-xl font-semibold mt-10 mb-3 text-green-400">
+									Hyperliquid Fundings
+								</h2>
+								{hlFundings.length === 0 ? (
+									<p className="text-gray-500">
+										No funding data found or error fetching Hyperliquid funding.
+									</p>
+								) : (
+									<div className="overflow-y-auto max-h-[400px] border border-gray-700 rounded">
+										<table className="w-full border-collapse">
+											<thead className="bg-gray-800 sticky top-0">
+												<tr className="bg-gray-800 text-left">
+													<th className="p-2 border border-gray-700">Market</th>
+													<th className="p-2 border border-gray-700">Side</th>
+													<th className="p-2 border border-gray-700">Change</th>
+													<th className="p-2 border border-gray-700">
+														Funding Rate
+													</th>
+													<th className="p-2 border border-gray-700">
+														Timestamp
+													</th>
+													{/* <th className="p-2 border border-gray-700">
+												Position Size
+											</th> */}
+												</tr>
+											</thead>
+											<tbody>
+												{hlFundings.map((f, i) => (
+													<tr key={i} className="hover:bg-gray-700">
+														<td className="p-2 border border-gray-700">
+															{f.market}
+														</td>
+														<td className="p-2 border border-gray-700">
+															{f.side}
+														</td>
+														<td className="p-2 border border-gray-700">
+															{Number(f.amount).toFixed(5)}
+														</td>
+														<td className="p-2 border border-gray-700">
+															{Number(f.funding_rate).toFixed(5)}
+														</td>
+														<td className="p-2 border border-gray-700">
+															{formatTimestamp(f.timestamp)}
+														</td>
+														{/* <td className="p-2 border border-gray-700">
+													{f.position_size}
+												</td> */}
+													</tr>
+												))}
+											</tbody>
+										</table>
+									</div>
+								)}
+							</section>
+
+							{/* ---------------- Lighter Fundings ---------------- */}
+							<section>
+								<h2 className="text-xl font-semibold mb-3 text-blue-400">
+									Lighter Fundings
+								</h2>
+								{ltFundings.length === 0 ? (
+									<p className="text-gray-500">No funding data found.</p>
+								) : (
+									<div className="overflow-y-auto max-h-[400px] border border-gray-700 rounded">
+										<table className="w-full border-collapse">
+											<thead className="bg-gray-800 sticky top-0">
+												<tr>
+													<th className="p-2 border border-gray-700">Market</th>
+													<th className="p-2 border border-gray-700">Side</th>
+													<th className="p-2 border border-gray-700">Change</th>
+													<th className="p-2 border border-gray-700">
+														Funding Rate
+													</th>
+													<th className="p-2 border border-gray-700">
+														Timestamp
+													</th>
+													{/* <th className="p-2 border border-gray-700">
+												Position Size
+											</th> */}
+												</tr>
+											</thead>
+											<tbody>
+												{ltFundings.map((f, i) => (
+													<tr key={i} className="hover:bg-gray-700">
+														<td className="p-2 border border-gray-700">
+															{f.market}
+														</td>
+														<td className="p-2 border border-gray-700">
+															{f.side}
+														</td>
+														<td className="p-2 border border-gray-700">
+															{Number(f.amount).toFixed(5)}
+														</td>
+														<td className="p-2 border border-gray-700">
+															{Number(f.funding_rate).toFixed(5)}
+														</td>
+														<td className="p-2 border border-gray-700">
+															{formatTimestamp(f.timestamp)}
+														</td>
+														{/* <td className="p-2 border border-gray-700">
+													{f.position_size}
+												</td> */}
+													</tr>
+												))}
+											</tbody>
+										</table>
+									</div>
+								)}
+							</section>
+
+							{hlTrades.length > 0 && (
+								<div className="overflow-x-auto mb-4">
+									<h3 className="text-lg font-semibold text-green-300 mb-2">
+										Market-wise Fees (Hyperliquid)
+									</h3>
+									<table className="min-w-full text-sm text-gray-300 border border-gray-700 rounded-xl">
+										<thead className="bg-gray-800 text-gray-200">
+											<tr>
+												<th className="px-4 py-2 text-left">Market</th>
+												<th className="px-4 py-2 text-right">Total Fees</th>
 											</tr>
-										))}
-									</tbody>
-								</table>
-							</div>
-						)}
-					</section>
+										</thead>
+										<tbody>
+											{getMarketWiseFees(hlTrades).map((item) => (
+												<tr
+													key={item.market}
+													className="border-t border-gray-700"
+												>
+													<td className="px-4 py-2">{item.market}</td>
+													<td className="px-4 py-2 text-right">{item.fee}</td>
+												</tr>
+											))}
+										</tbody>
+									</table>
+								</div>
+							)}
+							{/* ---------------- Hyperliquid Trades ---------------- */}
+							<section className="mb-10">
+								<h2 className="text-xl font-semibold mt-10 mb-3 text-green-400">
+									Hyperliquid Trades
+								</h2>
+								{hlTrades.length === 0 ? (
+									<p className="text-gray-500">No Trades data found.</p>
+								) : (
+									<div className="overflow-y-auto max-h-[400px] border border-gray-700 rounded">
+										<table className="w-full border-collapse">
+											<thead className="bg-gray-800 sticky top-0">
+												<tr className="bg-gray-800 text-left">
+													<th className="p-2 border border-gray-700">Market</th>
+													<th className="p-2 border border-gray-700">Side</th>
+													<th className="p-2 border border-gray-700">Amount</th>
+													<th className="p-2 border border-gray-700">Price</th>
+													<th className="p-2 border border-gray-700">Fee</th>
+													<th className="p-2 border border-gray-700">
+														Timestamp
+													</th>
+													{/* <th className="p-2 border border-gray-700">
+												Position Size
+											</th> */}
+												</tr>
+											</thead>
+											<tbody>
+												{hlTrades.map((f, i) => (
+													<tr key={i} className="hover:bg-gray-700">
+														<td className="p-2 border border-gray-700">
+															{f.market}
+														</td>
+														<td className="p-2 border border-gray-700">
+															{f.side}
+														</td>
+														<td className="p-2 border border-gray-700">
+															{Number(f.amount).toFixed(5)}
+														</td>
+														<td className="p-2 border border-gray-700">
+															{Number(f.price).toFixed(5)}
+														</td>
+														<td className="p-2 border border-gray-700">
+															{Number(f.fee).toFixed(5)}
+														</td>
+														<td className="p-2 border border-gray-700">
+															{formatTimestamp(f.buy_time)}
+														</td>
+														{/* <td className="p-2 border border-gray-700">
+													{f.position_size}
+												</td> */}
+													</tr>
+												))}
+											</tbody>
+										</table>
+									</div>
+								)}
+							</section>
 
-					{/* ---------------- Lighter Token-wise Funding ---------------- */}
-					<section className="mb-10">
-						<h2 className="text-xl font-semibold mb-3 text-blue-400">
-							Lighter Funding Summary (Token-wise)
-						</h2>
-						<div className="grid grid-cols-3 gap-4 mb-4 text-center text-green-400 font-bold">
-							{/* <div className="text-gray-500">Overall Funding</div> */}
-							<div className="text-green-400">Total Funding Earned</div>
-							<div className="text-green-400">Total Funding Paid</div>
-							<div className="text-green-400">Net Funding</div>
-							<div className="text-green-400">
-								{overallFunding(ltFundings).totalFundingEarned}
-							</div>
-							<div className="text-green-400">
-								{overallFunding(ltFundings).totalFundingPaid}
-							</div>
-							<div className="text-green-400">
-								{overallFunding(ltFundings).netFunding}
-							</div>
-						</div>
-						{ltFundings.length === 0 ? (
-							<p className="text-gray-500">No funding data available.</p>
-						) : (
-							<div className="overflow-y-auto max-h-[400px] border border-gray-700 rounded mb-4">
-								<table className="w-full border-collapse">
-									<thead className="bg-gray-800 sticky top-0">
-										<tr>
-											<th className="p-2 border border-gray-700">Token</th>
-											<th className="p-2 border border-gray-700">
-												Funding Paid
-											</th>
-											<th className="p-2 border border-gray-700">
-												Funding Earned
-											</th>
-											<th className="p-2 border border-gray-700">
-												Net Funding
-											</th>
-										</tr>
-									</thead>
-									<tbody>
-										{getTokenWiseFunding(ltFundings).map((f, i) => (
-											<tr key={i} className="hover:bg-gray-700">
-												<td className="p-2 border border-gray-700">
-													{f.token}
-												</td>
-												<td className="p-2 border border-gray-700">
-													{f.fundingPaid}
-												</td>
-												<td className="p-2 border border-gray-700">
-													{f.fundingEarned}
-												</td>
-												<td className="p-2 border border-gray-700">
-													{f.netFunding}
-												</td>
-											</tr>
-										))}
-									</tbody>
-								</table>
-							</div>
-						)}
-					</section>
-
-					{/* ---------------- Hyperliquid Fundings ---------------- */}
-					<section className="mb-10">
-						<h2 className="text-xl font-semibold mt-10 mb-3 text-green-400">
-							Hyperliquid Fundings
-						</h2>
-						{hlFundings.length === 0 ? (
+							{/* ---------------- Lighter Trades ---------------- */}
+							<section>
+								<h2 className="text-xl font-semibold mb-3 text-blue-400">
+									Lighter Trades
+								</h2>
+								{ltTrades.length === 0 ? (
+									<p className="text-gray-500">No trades data found.</p>
+								) : (
+									<div className="overflow-y-auto max-h-[400px] border border-gray-700 rounded">
+										<table className="w-full border-collapse">
+											<thead className="bg-gray-800 sticky top-0">
+												<tr>
+													<th className="p-2 border border-gray-700">Market</th>
+													<th className="p-2 border border-gray-700">Side</th>
+													<th className="p-2 border border-gray-700">Amount</th>
+													<th className="p-2 border border-gray-700">Price</th>
+													<th className="p-2 border border-gray-700">Fee</th>
+													<th className="p-2 border border-gray-700">
+														Timestamp
+													</th>
+													{/* <th className="p-2 border border-gray-700">
+												Position Size
+											</th> */}
+												</tr>
+											</thead>
+											<tbody>
+												{ltTrades.map((f, i) => (
+													<tr key={i} className="hover:bg-gray-700">
+														<td className="p-2 border border-gray-700">
+															{f.market}
+														</td>
+														<td className="p-2 border border-gray-700">
+															{f.side}
+														</td>
+														<td className="p-2 border border-gray-700">
+															{Number(f.amount).toFixed(5)}
+														</td>
+														<td className="p-2 border border-gray-700">
+															{Number(f.price).toFixed(5)}
+														</td>
+														<td className="p-2 border border-gray-700">
+															{Number(f.fee).toFixed(5)}
+														</td>
+														<td className="p-2 border border-gray-700">
+															{formatTimestamp(f.buy_time)}
+														</td>
+														{/* <td className="p-2 border border-gray-700">
+													{f.position_size}
+												</td> */}
+													</tr>
+												))}
+											</tbody>
+										</table>
+									</div>
+								)}
+							</section>
+						</>
+					) : (
+						<>
 							<p className="text-gray-500">
-								No funding data found or error fetching Hyperliquid funding.
+								No data to display. Please enter an address and fetch positions.
 							</p>
-						) : (
-							<div className="overflow-y-auto max-h-[400px] border border-gray-700 rounded">
-								<table className="w-full border-collapse">
-									<thead className="bg-gray-800 sticky top-0">
-										<tr className="bg-gray-800 text-left">
-											<th className="p-2 border border-gray-700">Market</th>
-											<th className="p-2 border border-gray-700">Side</th>
-											<th className="p-2 border border-gray-700">Change</th>
-											<th className="p-2 border border-gray-700">
-												Funding Rate
-											</th>
-											<th className="p-2 border border-gray-700">Timestamp</th>
-											{/* <th className="p-2 border border-gray-700">
-												Position Size
-											</th> */}
-										</tr>
-									</thead>
-									<tbody>
-										{hlFundings.map((f, i) => (
-											<tr key={i} className="hover:bg-gray-700">
-												<td className="p-2 border border-gray-700">
-													{f.market}
-												</td>
-												<td className="p-2 border border-gray-700">{f.side}</td>
-												<td className="p-2 border border-gray-700">
-													{Number(f.amount).toFixed(5)}
-												</td>
-												<td className="p-2 border border-gray-700">
-													{Number(f.funding_rate).toFixed(5)}
-												</td>
-												<td className="p-2 border border-gray-700">
-													{formatTimestamp(f.timestamp)}
-												</td>
-												{/* <td className="p-2 border border-gray-700">
-													{f.position_size}
-												</td> */}
-											</tr>
-										))}
-									</tbody>
-								</table>
-							</div>
-						)}
-					</section>
-
-					{/* ---------------- Lighter Fundings ---------------- */}
-					<section>
-						<h2 className="text-xl font-semibold mb-3 text-blue-400">
-							Lighter Fundings
-						</h2>
-						{ltFundings.length === 0 ? (
-							<p className="text-gray-500">No funding data found.</p>
-						) : (
-							<div className="overflow-y-auto max-h-[400px] border border-gray-700 rounded">
-								<table className="w-full border-collapse">
-									<thead className="bg-gray-800 sticky top-0">
-										<tr>
-											<th className="p-2 border border-gray-700">Market</th>
-											<th className="p-2 border border-gray-700">Side</th>
-											<th className="p-2 border border-gray-700">Change</th>
-											<th className="p-2 border border-gray-700">
-												Funding Rate
-											</th>
-											<th className="p-2 border border-gray-700">Timestamp</th>
-											{/* <th className="p-2 border border-gray-700">
-												Position Size
-											</th> */}
-										</tr>
-									</thead>
-									<tbody>
-										{ltFundings.map((f, i) => (
-											<tr key={i} className="hover:bg-gray-700">
-												<td className="p-2 border border-gray-700">
-													{f.market}
-												</td>
-												<td className="p-2 border border-gray-700">{f.side}</td>
-												<td className="p-2 border border-gray-700">
-													{Number(f.amount).toFixed(5)}
-												</td>
-												<td className="p-2 border border-gray-700">
-													{Number(f.funding_rate).toFixed(5)}
-												</td>
-												<td className="p-2 border border-gray-700">
-													{formatTimestamp(f.timestamp)}
-												</td>
-												{/* <td className="p-2 border border-gray-700">
-													{f.position_size}
-												</td> */}
-											</tr>
-										))}
-									</tbody>
-								</table>
-							</div>
-						)}
-					</section>
-
-					{hlTrades.length > 0 && (
-						<div className="overflow-x-auto mb-4">
-							<h3 className="text-lg font-semibold text-green-300 mb-2">
-								Market-wise Fees (Hyperliquid)
-							</h3>
-							<table className="min-w-full text-sm text-gray-300 border border-gray-700 rounded-xl">
-								<thead className="bg-gray-800 text-gray-200">
-									<tr>
-										<th className="px-4 py-2 text-left">Market</th>
-										<th className="px-4 py-2 text-right">Total Fees</th>
-									</tr>
-								</thead>
-								<tbody>
-									{getMarketWiseFees(hlTrades).map((item) => (
-										<tr key={item.market} className="border-t border-gray-700">
-											<td className="px-4 py-2">{item.market}</td>
-											<td className="px-4 py-2 text-right">{item.fee}</td>
-										</tr>
-									))}
-								</tbody>
-							</table>
-						</div>
+						</>
 					)}
-					{/* ---------------- Hyperliquid Trades ---------------- */}
-					<section className="mb-10">
-						<h2 className="text-xl font-semibold mt-10 mb-3 text-green-400">
-							Hyperliquid Trades
-						</h2>
-						{hlTrades.length === 0 ? (
-							<p className="text-gray-500">No Trades data found.</p>
-						) : (
-							<div className="overflow-y-auto max-h-[400px] border border-gray-700 rounded">
-								<table className="w-full border-collapse">
-									<thead className="bg-gray-800 sticky top-0">
-										<tr className="bg-gray-800 text-left">
-											<th className="p-2 border border-gray-700">Market</th>
-											<th className="p-2 border border-gray-700">Side</th>
-											<th className="p-2 border border-gray-700">Amount</th>
-											<th className="p-2 border border-gray-700">Price</th>
-											<th className="p-2 border border-gray-700">Fee</th>
-											<th className="p-2 border border-gray-700">Timestamp</th>
-											{/* <th className="p-2 border border-gray-700">
-												Position Size
-											</th> */}
-										</tr>
-									</thead>
-									<tbody>
-										{hlTrades.map((f, i) => (
-											<tr key={i} className="hover:bg-gray-700">
-												<td className="p-2 border border-gray-700">
-													{f.market}
-												</td>
-												<td className="p-2 border border-gray-700">{f.side}</td>
-												<td className="p-2 border border-gray-700">
-													{Number(f.amount).toFixed(5)}
-												</td>
-												<td className="p-2 border border-gray-700">
-													{Number(f.price).toFixed(5)}
-												</td>
-												<td className="p-2 border border-gray-700">
-													{Number(f.fee).toFixed(5)}
-												</td>
-												<td className="p-2 border border-gray-700">
-													{formatTimestamp(f.buy_time)}
-												</td>
-												{/* <td className="p-2 border border-gray-700">
-													{f.position_size}
-												</td> */}
-											</tr>
-										))}
-									</tbody>
-								</table>
-							</div>
-						)}
-					</section>
-
-					{/* ---------------- Lighter Trades ---------------- */}
-					<section>
-						<h2 className="text-xl font-semibold mb-3 text-blue-400">
-							Lighter Trades
-						</h2>
-						{ltTrades.length === 0 ? (
-							<p className="text-gray-500">No trades data found.</p>
-						) : (
-							<div className="overflow-y-auto max-h-[400px] border border-gray-700 rounded">
-								<table className="w-full border-collapse">
-									<thead className="bg-gray-800 sticky top-0">
-										<tr>
-											<th className="p-2 border border-gray-700">Market</th>
-											<th className="p-2 border border-gray-700">Side</th>
-											<th className="p-2 border border-gray-700">Amount</th>
-											<th className="p-2 border border-gray-700">Price</th>
-											<th className="p-2 border border-gray-700">Fee</th>
-											<th className="p-2 border border-gray-700">Timestamp</th>
-											{/* <th className="p-2 border border-gray-700">
-												Position Size
-											</th> */}
-										</tr>
-									</thead>
-									<tbody>
-										{ltTrades.map((f, i) => (
-											<tr key={i} className="hover:bg-gray-700">
-												<td className="p-2 border border-gray-700">
-													{f.market}
-												</td>
-												<td className="p-2 border border-gray-700">{f.side}</td>
-												<td className="p-2 border border-gray-700">
-													{Number(f.amount).toFixed(5)}
-												</td>
-												<td className="p-2 border border-gray-700">
-													{Number(f.price).toFixed(5)}
-												</td>
-												<td className="p-2 border border-gray-700">
-													{Number(f.fee).toFixed(5)}
-												</td>
-												<td className="p-2 border border-gray-700">
-													{formatTimestamp(f.buy_time)}
-												</td>
-												{/* <td className="p-2 border border-gray-700">
-													{f.position_size}
-												</td> */}
-											</tr>
-										))}
-									</tbody>
-								</table>
-							</div>
-						)}
-					</section>
+					{/* ---------------- Overall Summary ---------------- */}
 				</main>
 			</div>
 		</div>

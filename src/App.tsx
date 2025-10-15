@@ -21,6 +21,7 @@ export default function App() {
 				<Routes>
 					<Route path="/dashboard" element={<Dashboard />} />
 					<Route path="/" element={<Positions />} />
+					<Route path="/:address" element={<Positions />} />
 				</Routes>
 			</div>
 		</div>
