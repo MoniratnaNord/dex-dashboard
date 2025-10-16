@@ -3,8 +3,10 @@ import {
 	fetchHyperliquidUserPositions,
 	fetchLighterFundingRate,
 	fetchLighterUserPositions,
+	fetchMarketFees,
 	fetchPnl,
 	fetchPnlData,
+	fetchTokenFundings,
 	fetchUserFundings,
 	fetchUserTrades,
 } from "../api/positions";
@@ -13,6 +15,8 @@ import Header from "../components/Header";
 import { fetchHyperliquidMarkets, fetchLighterMarkets } from "../services/api";
 import { useLocation, useParams } from "react-router-dom";
 import { isAddress } from "ethers";
+import FundingTable from "../components/FundingTable";
+import { TradesTable } from "../components/TradesTable";
 
 export default function Positions() {
 	const params = useParams();
@@ -24,6 +28,10 @@ export default function Positions() {
 	const [ltFundings, setLtFundings] = useState<any[]>([]);
 	const [hlTrades, setHlTrades] = useState<any[]>([]);
 	const [ltTrades, setLtTrades] = useState<any[]>([]);
+	const [tokenFundingHl, setTokenFundingHl] = useState<any[]>([]);
+	const [tokenFundingLighter, setTokenFundingLighter] = useState<any[]>([]);
+	const [overallFundingDetails, setOverallFundingDetails] = useState<any>(null);
+	const [marketFees, setMarketFees] = useState<any[]>([]);
 	const [hlPnl, setHlPnl] = useState(0);
 	const [lighterPnl, setLighterPnl] = useState(0);
 	const [pnlData, setPnlData] = useState<any>(null);
@@ -40,21 +48,29 @@ export default function Positions() {
 		setLtFundings([]);
 		setHlTrades([]);
 		setLtTrades([]);
+		setTokenFundingHl([]);
+		setTokenFundingLighter([]);
+		setMarketFees([]);
 		try {
-			const [hl, lt, fundings, trades, pnl, pnlData] = await Promise.all([
-				fetchHyperliquidUserPositions(address),
-				fetchLighterUserPositions(address),
-				fetchUserFundings(address),
-				fetchUserTrades(address),
-				fetchPnl(address),
-				fetchPnlData(address),
-			]);
+			const [hl, lt, pnl, pnlData, tokenFunding, marketFees] =
+				await Promise.all([
+					fetchHyperliquidUserPositions(address),
+					fetchLighterUserPositions(address),
+					fetchPnl(address),
+					fetchPnlData(address),
+					fetchTokenFundings(address),
+					fetchMarketFees(address),
+				]);
 			setHlPositions(hl);
 			setLtPositions(lt);
-			setHlFundings(fundings.data.hyperliquid_funding || []);
-			setLtFundings(fundings.data.lighter_funding || []);
-			setHlTrades(trades.data.hyperliquid_trades || []);
-			setLtTrades(trades.data.lighter_trades || []);
+			setTokenFundingHl(tokenFunding.data.hyperliquid_token_wise || []);
+			setTokenFundingLighter(tokenFunding.data.lighter_token_wise || []);
+			setOverallFundingDetails(tokenFunding.data.overall_funding || null);
+			setMarketFees(marketFees.data.hl_fees || []);
+			// setHlFundings(fundings.data.hyperliquid_funding || []);
+			// setLtFundings(fundings.data.lighter_funding || []);
+			// setHlTrades(trades.data.hyperliquid_trades || []);
+			// setLtTrades(trades.data.lighter_trades || []);
 			setPnlData(pnlData);
 			const hlTotal = sumRealizedPnL(pnl.data.hl);
 			const lighterTotal = sumRealizedPnL(pnl.data.lighter);
@@ -568,16 +584,16 @@ export default function Positions() {
 									<div className="text-green-400">Total Funding Paid</div>
 									<div className="text-green-400">Net Funding</div>
 									<div className="text-green-400">
-										{overallFunding(hlFundings).totalFundingEarned}
+										{overallFundingDetails.hyperliquid.totalFundingEarned}
 									</div>
 									<div className="text-green-400">
-										{overallFunding(hlFundings).totalFundingPaid}
+										{overallFundingDetails.hyperliquid.totalFundingPaid}
 									</div>
 									<div className="text-green-400">
-										{overallFunding(hlFundings).netFunding}
+										{overallFundingDetails.hyperliquid.netFunding}
 									</div>
 								</div>
-								{hlFundings.length === 0 ? (
+								{tokenFundingHl.length === 0 ? (
 									<p className="text-gray-500">No funding data available.</p>
 								) : (
 									<div className="overflow-y-auto max-h-[400px] border border-gray-700 rounded">
@@ -597,7 +613,7 @@ export default function Positions() {
 												</tr>
 											</thead>
 											<tbody>
-												{getTokenWiseFunding(hlFundings).map((f, i) => (
+												{tokenFundingHl.map((f, i) => (
 													<tr key={i} className="hover:bg-gray-700">
 														<td className="p-2 border border-gray-700">
 															{f.token}
@@ -630,16 +646,16 @@ export default function Positions() {
 									<div className="text-green-400">Total Funding Paid</div>
 									<div className="text-green-400">Net Funding</div>
 									<div className="text-green-400">
-										{overallFunding(ltFundings).totalFundingEarned}
+										{overallFundingDetails.lighter.totalFundingEarned}
 									</div>
 									<div className="text-green-400">
-										{overallFunding(ltFundings).totalFundingPaid}
+										{overallFundingDetails.lighter.totalFundingPaid}
 									</div>
 									<div className="text-green-400">
-										{overallFunding(ltFundings).netFunding}
+										{overallFundingDetails.lighter.netFunding}
 									</div>
 								</div>
-								{ltFundings.length === 0 ? (
+								{tokenFundingLighter.length === 0 ? (
 									<p className="text-gray-500">No funding data available.</p>
 								) : (
 									<div className="overflow-y-auto max-h-[400px] border border-gray-700 rounded mb-4">
@@ -659,7 +675,7 @@ export default function Positions() {
 												</tr>
 											</thead>
 											<tbody>
-												{getTokenWiseFunding(ltFundings).map((f, i) => (
+												{tokenFundingLighter.map((f, i) => (
 													<tr key={i} className="hover:bg-gray-700">
 														<td className="p-2 border border-gray-700">
 															{f.token}
@@ -683,114 +699,12 @@ export default function Positions() {
 
 							{/* ---------------- Hyperliquid Fundings ---------------- */}
 							<section className="mb-10">
-								<h2 className="text-xl font-semibold mt-10 mb-3 text-green-400">
-									Hyperliquid Fundings
-								</h2>
-								{hlFundings.length === 0 ? (
-									<p className="text-gray-500">
-										No funding data found or error fetching Hyperliquid funding.
-									</p>
-								) : (
-									<div className="overflow-y-auto max-h-[400px] border border-gray-700 rounded">
-										<table className="w-full border-collapse">
-											<thead className="bg-gray-800 sticky top-0">
-												<tr className="bg-gray-800 text-left">
-													<th className="p-2 border border-gray-700">Market</th>
-													<th className="p-2 border border-gray-700">Side</th>
-													<th className="p-2 border border-gray-700">Change</th>
-													<th className="p-2 border border-gray-700">
-														Funding Rate
-													</th>
-													<th className="p-2 border border-gray-700">
-														Timestamp
-													</th>
-													{/* <th className="p-2 border border-gray-700">
-												Position Size
-											</th> */}
-												</tr>
-											</thead>
-											<tbody>
-												{hlFundings.map((f, i) => (
-													<tr key={i} className="hover:bg-gray-700">
-														<td className="p-2 border border-gray-700">
-															{f.market}
-														</td>
-														<td className="p-2 border border-gray-700">
-															{f.side}
-														</td>
-														<td className="p-2 border border-gray-700">
-															{Number(f.amount).toFixed(5)}
-														</td>
-														<td className="p-2 border border-gray-700">
-															{Number(f.funding_rate).toFixed(5)}
-														</td>
-														<td className="p-2 border border-gray-700">
-															{formatTimestamp(f.timestamp)}
-														</td>
-														{/* <td className="p-2 border border-gray-700">
-													{f.position_size}
-												</td> */}
-													</tr>
-												))}
-											</tbody>
-										</table>
-									</div>
-								)}
+								<FundingTable title={"Hyperliquid Fundings"} platform="hl" />
 							</section>
 
 							{/* ---------------- Lighter Fundings ---------------- */}
 							<section>
-								<h2 className="text-xl font-semibold mb-3 text-blue-400">
-									Lighter Fundings
-								</h2>
-								{ltFundings.length === 0 ? (
-									<p className="text-gray-500">No funding data found.</p>
-								) : (
-									<div className="overflow-y-auto max-h-[400px] border border-gray-700 rounded">
-										<table className="w-full border-collapse">
-											<thead className="bg-gray-800 sticky top-0">
-												<tr>
-													<th className="p-2 border border-gray-700">Market</th>
-													<th className="p-2 border border-gray-700">Side</th>
-													<th className="p-2 border border-gray-700">Change</th>
-													<th className="p-2 border border-gray-700">
-														Funding Rate
-													</th>
-													<th className="p-2 border border-gray-700">
-														Timestamp
-													</th>
-													{/* <th className="p-2 border border-gray-700">
-												Position Size
-											</th> */}
-												</tr>
-											</thead>
-											<tbody>
-												{ltFundings.map((f, i) => (
-													<tr key={i} className="hover:bg-gray-700">
-														<td className="p-2 border border-gray-700">
-															{f.market}
-														</td>
-														<td className="p-2 border border-gray-700">
-															{f.side}
-														</td>
-														<td className="p-2 border border-gray-700">
-															{Number(f.amount).toFixed(5)}
-														</td>
-														<td className="p-2 border border-gray-700">
-															{Number(f.funding_rate).toFixed(5)}
-														</td>
-														<td className="p-2 border border-gray-700">
-															{formatTimestamp(f.timestamp)}
-														</td>
-														{/* <td className="p-2 border border-gray-700">
-													{f.position_size}
-												</td> */}
-													</tr>
-												))}
-											</tbody>
-										</table>
-									</div>
-								)}
+								<FundingTable title={"Lighter Fundings"} platform="lighter" />
 							</section>
 
 							{hlTrades.length > 0 && (
@@ -821,116 +735,12 @@ export default function Positions() {
 							)}
 							{/* ---------------- Hyperliquid Trades ---------------- */}
 							<section className="mb-10">
-								<h2 className="text-xl font-semibold mt-10 mb-3 text-green-400">
-									Hyperliquid Trades
-								</h2>
-								{hlTrades.length === 0 ? (
-									<p className="text-gray-500">No Trades data found.</p>
-								) : (
-									<div className="overflow-y-auto max-h-[400px] border border-gray-700 rounded">
-										<table className="w-full border-collapse">
-											<thead className="bg-gray-800 sticky top-0">
-												<tr className="bg-gray-800 text-left">
-													<th className="p-2 border border-gray-700">Market</th>
-													<th className="p-2 border border-gray-700">Side</th>
-													<th className="p-2 border border-gray-700">Amount</th>
-													<th className="p-2 border border-gray-700">Price</th>
-													<th className="p-2 border border-gray-700">Fee</th>
-													<th className="p-2 border border-gray-700">
-														Timestamp
-													</th>
-													{/* <th className="p-2 border border-gray-700">
-												Position Size
-											</th> */}
-												</tr>
-											</thead>
-											<tbody>
-												{hlTrades.map((f, i) => (
-													<tr key={i} className="hover:bg-gray-700">
-														<td className="p-2 border border-gray-700">
-															{f.market}
-														</td>
-														<td className="p-2 border border-gray-700">
-															{f.side}
-														</td>
-														<td className="p-2 border border-gray-700">
-															{Number(f.amount).toFixed(5)}
-														</td>
-														<td className="p-2 border border-gray-700">
-															{Number(f.price).toFixed(5)}
-														</td>
-														<td className="p-2 border border-gray-700">
-															{Number(f.fee).toFixed(5)}
-														</td>
-														<td className="p-2 border border-gray-700">
-															{formatTimestamp(f.buy_time)}
-														</td>
-														{/* <td className="p-2 border border-gray-700">
-													{f.position_size}
-												</td> */}
-													</tr>
-												))}
-											</tbody>
-										</table>
-									</div>
-								)}
+								<TradesTable title={"Hyperliquid Trades"} platform="hl" />
 							</section>
 
 							{/* ---------------- Lighter Trades ---------------- */}
 							<section>
-								<h2 className="text-xl font-semibold mb-3 text-blue-400">
-									Lighter Trades
-								</h2>
-								{ltTrades.length === 0 ? (
-									<p className="text-gray-500">No trades data found.</p>
-								) : (
-									<div className="overflow-y-auto max-h-[400px] border border-gray-700 rounded">
-										<table className="w-full border-collapse">
-											<thead className="bg-gray-800 sticky top-0">
-												<tr>
-													<th className="p-2 border border-gray-700">Market</th>
-													<th className="p-2 border border-gray-700">Side</th>
-													<th className="p-2 border border-gray-700">Amount</th>
-													<th className="p-2 border border-gray-700">Price</th>
-													<th className="p-2 border border-gray-700">Fee</th>
-													<th className="p-2 border border-gray-700">
-														Timestamp
-													</th>
-													{/* <th className="p-2 border border-gray-700">
-												Position Size
-											</th> */}
-												</tr>
-											</thead>
-											<tbody>
-												{ltTrades.map((f, i) => (
-													<tr key={i} className="hover:bg-gray-700">
-														<td className="p-2 border border-gray-700">
-															{f.market}
-														</td>
-														<td className="p-2 border border-gray-700">
-															{f.side}
-														</td>
-														<td className="p-2 border border-gray-700">
-															{Number(f.amount).toFixed(5)}
-														</td>
-														<td className="p-2 border border-gray-700">
-															{Number(f.price).toFixed(5)}
-														</td>
-														<td className="p-2 border border-gray-700">
-															{Number(f.fee).toFixed(5)}
-														</td>
-														<td className="p-2 border border-gray-700">
-															{formatTimestamp(f.buy_time)}
-														</td>
-														{/* <td className="p-2 border border-gray-700">
-													{f.position_size}
-												</td> */}
-													</tr>
-												))}
-											</tbody>
-										</table>
-									</div>
-								)}
+								<TradesTable title={"Lighter Trades"} platform="lighter" />
 							</section>
 						</>
 					) : (

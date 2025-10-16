@@ -26,20 +26,40 @@ export async function fetchLighterUserPositions(address: string) {
 	return data.accounts[0].positions;
 }
 
-export async function fetchUserFundings(address: string) {
+export async function fetchHlFundings(address: string, page: number) {
 	const url = `${
 		import.meta.env.VITE_API_URL
-	}/api/user/${address}/get-user-fundings`;
+	}/api/user/${address}/get-hl-fundings?page=${page}`;
 	const res = await fetch(url);
 
 	if (!res.ok) throw new Error("Failed to fetch Lighter data");
 	const data = await res.json();
 	return data;
 }
-export async function fetchUserTrades(address: string) {
+export async function fetchLighterFundings(address: string, page: number) {
 	const url = `${
 		import.meta.env.VITE_API_URL
-	}/api/user/${address}/get-users-trades`;
+	}/api/user/${address}/get-lighter-fundings?page=${page}`;
+	const res = await fetch(url);
+
+	if (!res.ok) throw new Error("Failed to fetch Lighter data");
+	const data = await res.json();
+	return data;
+}
+export async function fetchHlTrades(address: string, page: number) {
+	const url = `${
+		import.meta.env.VITE_API_URL
+	}/api/user/${address}/get-hl-trades?page=${page}`;
+	const res = await fetch(url);
+
+	if (!res.ok) throw new Error("Failed to fetch Lighter data");
+	const data = await res.json();
+	return data;
+}
+export async function fetchLighterTrades(address: string, page: number) {
+	const url = `${
+		import.meta.env.VITE_API_URL
+	}/api/user/${address}/get-lighter-trades?page=${page}`;
 	const res = await fetch(url);
 
 	if (!res.ok) throw new Error("Failed to fetch Lighter data");
@@ -74,6 +94,26 @@ export async function fetchPnlData(address: string) {
 	const res = await fetch(url);
 	if (!res.ok) throw new Error("Failed to fetch PNL");
 	console.log("checking response", res);
+	const data = await res.json();
+	return data;
+}
+export async function fetchTokenFundings(address: string) {
+	const url = `${
+		import.meta.env.VITE_API_URL
+	}/api/user/${address}/token-wise-fundings`;
+	const res = await fetch(url);
+
+	if (!res.ok) throw new Error("Failed to fetch Lighter data");
+	const data = await res.json();
+	return data;
+}
+export async function fetchMarketFees(address: string) {
+	const url = `${
+		import.meta.env.VITE_API_URL
+	}/api/user/${address}/market-wise-fees`;
+	const res = await fetch(url);
+
+	if (!res.ok) throw new Error("Failed to fetch Lighter data");
 	const data = await res.json();
 	return data;
 }
