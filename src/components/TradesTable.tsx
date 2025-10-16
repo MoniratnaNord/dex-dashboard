@@ -62,48 +62,63 @@ export function TradesTable({
 	}, [address, page]);
 	return (
 		<section className="mb-10">
-			<h2 className="text-xl font-semibold mt-10 mb-3 text-green-400">
+			<h2 className="text-xl font-semibold mt-10 mb-3 text-blue-400">
 				{title}
 			</h2>
 			{data.length === 0 ? (
 				<p className="text-gray-500">No Trades data found.</p>
 			) : (
 				<>
-					<div className="overflow-y-auto max-h-[400px] border border-gray-700 rounded">
-						<table className="w-full border-collapse">
-							<thead className="bg-gray-800 sticky top-0">
-								<tr className="bg-gray-800 text-left">
-									<th className="p-2 border border-gray-700">Market</th>
-									<th className="p-2 border border-gray-700">Side</th>
-									<th className="p-2 border border-gray-700">Amount</th>
-									<th className="p-2 border border-gray-700">Price</th>
-									<th className="p-2 border border-gray-700">Fee</th>
-									<th className="p-2 border border-gray-700">Timestamp</th>
-									{/* <th className="p-2 border border-gray-700">
-												Position Size
-											</th> */}
+					<div className="overflow-x-auto overflow-y-auto max-h-[400px]">
+						<table className="w-full">
+							<thead className="bg-slate-900/50 sticky top-0">
+								<tr className="bg-slate-900/50 text-left text-slate-400 text-sm">
+									<th className="px-4 py-3 font-medium">Market</th>
+									<th className="px-4 py-3 font-medium">Size</th>
+									<th className="px-4 py-3 font-medium">Amount</th>
+									<th className="px-4 py-3 font-medium">Price</th>
+									<th className="px-4 py-3 font-medium">Fee</th>
+									<th className="px-4 py-3 font-medium">Time</th>
 								</tr>
 							</thead>
-							<tbody>
-								{data.map((f, i) => (
-									<tr key={i} className="hover:bg-gray-700">
-										<td className="p-2 border border-gray-700">{f.market}</td>
-										<td className="p-2 border border-gray-700">{f.side}</td>
-										<td className="p-2 border border-gray-700">
+							<tbody className="text-slate-200">
+								{data.map((f: Trade, i) => (
+									<tr
+										key={i}
+										className="border-t border-slate-700/50 hover:bg-slate-700/30"
+									>
+										<td className="px-4 py-3 font-medium">{f.market}</td>
+										<td className="px-4 py-3">
+											<span
+												className={
+													f.side.toUpperCase() === "BUY"
+														? "text-green-400"
+														: "text-red-400"
+												}
+											>
+												{f.side}
+											</span>
+										</td>
+										<td className="px-4 py-3 text-green-400">
 											{Number(f.amount).toFixed(5)}
 										</td>
-										<td className="p-2 border border-gray-700">
-											{Number(f.price).toFixed(5)}
+										<td className="px-4 py-3">
+											<span
+												className={
+													Number(f.price) >= 0
+														? "text-green-400"
+														: "text-red-400"
+												}
+											>
+												{Number(f.price).toFixed(5)}
+											</span>
 										</td>
-										<td className="p-2 border border-gray-700">
+										<td className="px-4 py-3 text-green-400">
 											{Number(f.fee).toFixed(5)}
 										</td>
-										<td className="p-2 border border-gray-700">
+										<td className="px-4 py-3 text-green-400">
 											{formatTimestamp(f.buy_time)}
 										</td>
-										{/* <td className="p-2 border border-gray-700">
-													{f.position_size}
-												</td> */}
 									</tr>
 								))}
 							</tbody>

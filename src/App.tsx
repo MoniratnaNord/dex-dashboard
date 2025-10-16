@@ -9,15 +9,7 @@ import Sidebar from "./components/Sidebar";
 export default function App() {
 	return (
 		<div>
-			{/* <nav className="p-4 bg-white shadow flex justify-between">
-				<Link to="/" className="font-semibold text-blue-600">
-					Dashboard
-				</Link>
-				<Link to="/positions" className="font-semibold text-blue-600">
-					Positions
-				</Link>
-			</nav> */}
-			<div className="">
+			<div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
 				<Routes>
 					<Route path="/dashboard" element={<Dashboard />} />
 					<Route path="/" element={<Positions />} />
