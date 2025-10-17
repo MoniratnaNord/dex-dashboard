@@ -6,9 +6,10 @@ import {
 	RefreshCw,
 } from "lucide-react";
 import { PlatformMarketOption } from "../types";
+import { useState } from "react";
 
 interface FilterBarProps {
-	markets: PlatformMarketOption[];
+	markets: any[];
 	selectedMarketId?: string;
 	onMarketChange: (id: string) => void;
 	startDate: string; // YYYY-MM-DD (UTC)
@@ -28,10 +29,11 @@ export default function FilterBar({
 	onEndDateChange,
 	onRefresh,
 }: FilterBarProps) {
+	const [market, setMarket] = useState(selectedMarketId || "");
 	return (
 		<div className="flex items-center justify-between mb-6">
 			<div className="flex items-center gap-4">
-				<span className="text-gray-400 text-sm">Compare platforms:</span>
+				<span className="text-gray-400 text-sm">Select Market:</span>
 
 				<select
 					value={selectedMarketId}
@@ -39,14 +41,14 @@ export default function FilterBar({
 					className="bg-[#1f1f1f] text-white px-4 py-2 rounded border border-gray-700 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
 				>
 					<option value="">Select market</option>
-					{markets.map((m) => (
-						<option key={m.id} value={m.id}>
-							{m.display}
+					{markets.map((m, i) => (
+						<option key={i} value={m}>
+							{m}
 						</option>
 					))}
 				</select>
 
-				<input
+				{/* <input
 					type="date"
 					value={startDate}
 					onChange={(e) => onStartDateChange(e.target.value)}
@@ -58,25 +60,25 @@ export default function FilterBar({
 					value={endDate}
 					onChange={(e) => onEndDateChange(e.target.value)}
 					className="bg-[#1f1f1f] text-white px-4 py-2 rounded border border-gray-700 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
-				/>
+				/> */}
 			</div>
 
 			<div className="flex items-center gap-2">
-				<button className="p-2 text-gray-400 hover:text-white transition-colors">
+				{/* <button className="p-2 text-gray-400 hover:text-white transition-colors">
 					<ChevronLeft size={18} />
-				</button>
+				</button> */}
 
-				<button className="flex items-center gap-2 px-4 py-2 bg-[#1f1f1f] text-white rounded border border-gray-700 text-sm hover:bg-gray-800 transition-colors">
+				{/* <button className="flex items-center gap-2 px-4 py-2 bg-[#1f1f1f] text-white rounded border border-gray-700 text-sm hover:bg-gray-800 transition-colors">
 					<Clock size={16} />
 					<span>
 						{startDate} → {endDate}
 					</span>
 					<ChevronDown size={16} />
-				</button>
+				</button> */}
 
-				<button className="p-2 text-gray-400 hover:text-white transition-colors">
+				{/* <button className="p-2 text-gray-400 hover:text-white transition-colors">
 					<ChevronRight size={18} />
-				</button>
+				</button> */}
 
 				<button
 					className="p-2 text-gray-400 hover:text-white transition-colors"
@@ -87,10 +89,13 @@ export default function FilterBar({
 					</svg>
 				</button>
 
-				<button className="flex items-center gap-2 px-4 py-2 bg-[#1f1f1f] text-white rounded border border-gray-700 text-sm hover:bg-gray-800 transition-colors">
+				<button
+					onClick={() => onRefresh && onRefresh()}
+					className="flex items-center gap-2 px-4 py-2 bg-[#1f1f1f] text-white rounded border border-gray-700 text-sm hover:bg-gray-800 transition-colors"
+				>
 					<RefreshCw size={16} />
 					<span>Refresh</span>
-					<ChevronDown size={16} />
+					{/* <ChevronDown size={16} /> */}
 				</button>
 			</div>
 		</div>

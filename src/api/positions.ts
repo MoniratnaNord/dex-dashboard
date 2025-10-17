@@ -117,3 +117,52 @@ export async function fetchMarketFees(address: string) {
 	const data = await res.json();
 	return data;
 }
+export async function fetchMarketFundings() {
+	const url = `${
+		import.meta.env.VITE_FUNDING_API_URL
+	}/api/funding-rates/latest-batch`;
+	const res = await fetch(url, {
+		method: "GET",
+		headers: {
+			"X-Access-Key": import.meta.env.VITE_ACCESS_KEY,
+			"X-Secret-Key": import.meta.env.VITE_SECRET_KEY,
+		},
+	});
+	// const res = await fetch(url);
+	console.log("fetching market fundings from", url);
+	if (!res.ok) throw new Error("Failed to fetch Lighter data");
+	const data = await res.json();
+	return data;
+}
+
+export async function fetchAllMarkets() {
+	const url = `${
+		import.meta.env.VITE_FUNDING_API_URL
+	}/api/funding-rates/markets`;
+	const res = await fetch(url, {
+		method: "GET",
+		headers: {
+			"X-Access-Key": import.meta.env.VITE_ACCESS_KEY,
+			"X-Secret-Key": import.meta.env.VITE_SECRET_KEY,
+		},
+	});
+	if (!res.ok) throw new Error("Failed to fetch Lighter data");
+	const data = await res.json();
+	return data;
+}
+
+export async function fetchScoring(symbol: string) {
+	const url = `${
+		import.meta.env.VITE_FUNDING_API_URL
+	}/api/funding-rates/score-market?market=${symbol}`;
+	const res = await fetch(url, {
+		method: "GET",
+		headers: {
+			"X-Access-Key": import.meta.env.VITE_ACCESS_KEY,
+			"X-Secret-Key": import.meta.env.VITE_SECRET_KEY,
+		},
+	});
+	if (!res.ok) throw new Error("Failed to fetch Lighter data");
+	const data = await res.json();
+	return data;
+}

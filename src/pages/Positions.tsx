@@ -180,16 +180,11 @@ export default function Positions() {
 	];
 
 	return (
-		// <div className="min-h-screen bg-[#141414] flex text-white">
-		// 	<Sidebar />
-
-		// 	<div className="flex-1 flex flex-col">
-		// 		<Header />
 		<div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 				<div className="mb-8">
 					<h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent mb-4">
-						DEX Analytics
+						DEX Analytics{" "}
 					</h1>
 
 					<div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 p-4 mb-6">
@@ -433,6 +428,7 @@ export default function Positions() {
 												<thead className="bg-slate-900/50">
 													<tr className="text-left text-slate-400 text-sm">
 														<th className="px-4 py-3 font-medium">Symbol</th>
+														<th className="px-4 py-3 font-medium">Side</th>
 														<th className="px-4 py-3 font-medium">
 															Entry Price
 														</th>
@@ -460,6 +456,19 @@ export default function Positions() {
 															>
 																<td className="px-4 py-3 font-medium">
 																	{p.position.coin}
+																</td>
+																<td className="px-4 py-3">
+																	<span
+																		className={
+																			p.position.szi > 0
+																				? "text-green-400"
+																				: "text-red-400"
+																		}
+																	>
+																		{Number(p.position.szi) > 0
+																			? "LONG"
+																			: "SHORT"}
+																	</span>
 																</td>
 																<td className="px-4 py-3">
 																	{p.position.entryPx}
@@ -529,6 +538,7 @@ export default function Positions() {
 												<thead className="bg-slate-900/50">
 													<tr className="text-left text-slate-400 text-sm">
 														<th className="px-4 py-3 font-medium">Symbol</th>
+														<th className="px-4 py-3 font-medium">Side</th>
 														<th className="px-4 py-3 font-medium">
 															Entry Price
 														</th>
@@ -555,6 +565,17 @@ export default function Positions() {
 															>
 																<td className="px-4 py-3 font-medium">
 																	{p.symbol}
+																</td>
+																<td className="px-4 py-3">
+																	<span
+																		className={
+																			Number(p.sign) === 1
+																				? "text-green-400"
+																				: "text-red-400"
+																		}
+																	>
+																		{Number(p.sign) === 1 ? "LONG" : "SHORT"}
+																	</span>
 																</td>
 																<td className="px-4 py-3">
 																	{p.avg_entry_price}
@@ -593,7 +614,7 @@ export default function Positions() {
 								<div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 overflow-hidden">
 									<div className="p-6 border-b border-slate-700/50">
 										<h3 className="text-xl font-bold text-blue-400">
-											Hyperliquid Token Funding
+											Overall Token Funding
 										</h3>
 									</div>
 									{tokenFundingHl.length === 0 ? (
@@ -619,19 +640,38 @@ export default function Positions() {
 												<tbody className="text-slate-200">
 													<tr className="border-t border-slate-700/50 hover:bg-slate-700/30">
 														<td className="px-4 py-3 font-medium">
-															{
-																overallFundingDetails.hyperliquid
-																	.totalFundingEarned
-															}
+															{Number(
+																Number(
+																	overallFundingDetails.hyperliquid
+																		.totalFundingEarned
+																) +
+																	Number(
+																		overallFundingDetails.lighter
+																			.totalFundingEarned
+																	)
+															).toFixed(4)}
 														</td>
 														<td className="px-4 py-3 text-red-400">
-															{
-																overallFundingDetails.hyperliquid
-																	.totalFundingPaid
-															}
+															{Number(
+																Number(
+																	overallFundingDetails.hyperliquid
+																		.totalFundingPaid
+																) +
+																	Number(
+																		overallFundingDetails.lighter
+																			.totalFundingPaid
+																	)
+															).toFixed(4)}
 														</td>
 														<td className="px-4 py-3 text-green-400">
-															{overallFundingDetails.hyperliquid.netFunding}
+															{Number(
+																Number(
+																	overallFundingDetails.hyperliquid.netFunding
+																) +
+																	Number(
+																		overallFundingDetails.lighter.netFunding
+																	)
+															).toFixed(4)}
 														</td>
 													</tr>
 												</tbody>
@@ -701,49 +741,55 @@ export default function Positions() {
 									)}
 								</div>
 
-								<div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 overflow-hidden">
-									<div className="p-6 border-b border-slate-700/50">
-										<h3 className="text-xl font-bold text-purple-400">
-											Lighter Token Funding
-										</h3>
-									</div>
-									{tokenFundingLighter.length === 0 ? (
-										<div className="p-6 text-center text-slate-400">
-											No funding data available.
-										</div>
-									) : (
-										<div className="overflow-x-auto">
-											<table className="w-full">
-												<thead className="bg-slate-900/50">
-													<tr className="text-left text-slate-400 text-sm">
-														<th className="px-4 py-3 font-medium">
-															Total Funding Earned
-														</th>
-														<th className="px-4 py-3 font-medium">
-															Total Funding Paid
-														</th>
-														<th className="px-4 py-3 font-medium">
-															Net Funding
-														</th>
-													</tr>
-												</thead>
-												<tbody className="text-slate-200">
-													<tr className="border-t border-slate-700/50 hover:bg-slate-700/30">
-														<td className="px-4 py-3 font-medium">
-															{overallFundingDetails.lighter.totalFundingEarned}
-														</td>
-														<td className="px-4 py-3 text-red-400">
-															{overallFundingDetails.lighter.totalFundingPaid}
-														</td>
-														<td className="px-4 py-3 text-green-400">
-															{overallFundingDetails.lighter.netFunding}
-														</td>
-													</tr>
-												</tbody>
-											</table>
-										</div>
-									)}
-								</div>
+								{/* <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 overflow-hidden">
+											<div className="p-6 border-b border-slate-700/50">
+												<h3 className="text-xl font-bold text-purple-400">
+													Lighter Token Funding
+												</h3>
+											</div>
+											{tokenFundingLighter.length === 0 ? (
+												<div className="p-6 text-center text-slate-400">
+													No funding data available.
+												</div>
+											) : (
+												<div className="overflow-x-auto">
+													<table className="w-full">
+														<thead className="bg-slate-900/50">
+															<tr className="text-left text-slate-400 text-sm">
+																<th className="px-4 py-3 font-medium">
+																	Total Funding Earned
+																</th>
+																<th className="px-4 py-3 font-medium">
+																	Total Funding Paid
+																</th>
+																<th className="px-4 py-3 font-medium">
+																	Net Funding
+																</th>
+															</tr>
+														</thead>
+														<tbody className="text-slate-200">
+															<tr className="border-t border-slate-700/50 hover:bg-slate-700/30">
+																<td className="px-4 py-3 font-medium">
+																	{
+																		overallFundingDetails.lighter
+																			.totalFundingEarned
+																	}
+																</td>
+																<td className="px-4 py-3 text-red-400">
+																	{
+																		overallFundingDetails.lighter
+																			.totalFundingPaid
+																	}
+																</td>
+																<td className="px-4 py-3 text-green-400">
+																	{overallFundingDetails.lighter.netFunding}
+																</td>
+															</tr>
+														</tbody>
+													</table>
+												</div>
+											)}
+										</div> */}
 								<div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 overflow-hidden">
 									<div className="p-6 border-b border-slate-700/50">
 										<h3 className="text-xl font-bold text-purple-400">
@@ -789,7 +835,7 @@ export default function Positions() {
 															<td className="px-4 py-3">
 																<span
 																	className={
-																		Number(f.netFunding) >= 0
+																		Number(f.netFunding) > 0
 																			? "text-green-400"
 																			: "text-red-400"
 																	}
@@ -871,7 +917,5 @@ export default function Positions() {
 				)}
 			</div>
 		</div>
-		// </div>
-		// </div>
 	);
 }

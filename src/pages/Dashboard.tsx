@@ -9,13 +9,15 @@ import {
 	fetchLighterMarkets,
 	fetchFundingSeries,
 } from "../services/api";
+import { PlatformTable } from "../components/PlatformTable";
+import { fetchAllMarkets } from "../api/positions";
 
 function Dashboard() {
 	const [fundingData, setFundingData] = useState<PlatformData[]>([]);
 	const [loading, setLoading] = useState(true);
 
 	// Combined markets from both platforms
-	const [markets, setMarkets] = useState<PlatformMarketOption[]>([]);
+	const [markets, setMarkets] = useState<any[]>([]);
 	const [selectedMarketId, setSelectedMarketId] = useState<string | undefined>(
 		undefined
 	);
@@ -38,7 +40,7 @@ function Dashboard() {
 		// intentionally not adding loadData to deps to avoid re-creation
 		loadData();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [selectedMarketId, startDate, endDate]);
+	}, [selectedMarketId]);
 
 	const dateIsoToMsUtc = (iso: string) => {
 		const [y, m, d] = iso.split("-").map(Number);
@@ -49,43 +51,43 @@ function Dashboard() {
 		try {
 			setLoading(true);
 
-			const [hlMarkets, ltMarkets] = await Promise.all([
-				fetchHyperliquidMarkets(),
-				fetchLighterMarkets(),
+			const [hlMarkets] = await Promise.all([
+				fetchAllMarkets(),
+				// fetchLighterMarkets(),
 			]);
-
+			console.log("checking markets", hlMarkets);
 			// Create a set of display symbols for quick lookup
-			const lighterSymbols = new Set(ltMarkets.map((m) => m.display));
-			const hyperSymbols = new Set(hlMarkets.map((m) => m.display));
+			// const lighterSymbols = new Set(ltMarkets.map((m) => m.display));
+			// const hyperSymbols = new Set(hlMarkets.map((m) => m.display));
 
 			// Find intersection of symbols
-			const commonSymbols = [...hyperSymbols].filter((symbol) =>
-				lighterSymbols.has(symbol)
-			);
+			// const commonSymbols = [...hyperSymbols].filter((symbol) =>
+			// 	lighterSymbols.has(symbol)
+			// );
 
 			// Filter both lists to include only common ones
-			const filteredHL = hlMarkets.filter((m) =>
-				commonSymbols.includes(m.display)
-			);
-			const filteredLT = ltMarkets.filter((m) =>
-				commonSymbols.includes(m.display)
-			);
+			// const filteredHL = hlMarkets.filter((m) =>
+			// 	commonSymbols.includes(m.display)
+			// );
+			// const filteredLT = ltMarkets.filter((m) =>
+			// 	commonSymbols.includes(m.display)
+			// );
 
-			// Combine both filtered lists
-			const combined = [...filteredHL, ...filteredLT];
+			// // Combine both filtered lists
+			// const combined = [...filteredHL, ...filteredLT];
 
-			setMarkets(combined);
+			setMarkets(hlMarkets.data || []);
 
 			// Select the first common Hyperliquid market by default
-			const firstHL = filteredHL[0];
+			const firstHL = hlMarkets.data[0];
 			if (firstHL) {
-				setSelectedMarketId(firstHL.id);
+				setSelectedMarketId(firstHL);
 			} else {
 				setSelectedMarketId(undefined);
 			}
-
+			setLoading(false);
 			console.log(
-				`Loaded ${filteredHL.length} common markets shared between both platforms.`
+				`Loaded ${hlMarkets.data.length} common markets shared between both platforms.`
 			);
 		} catch (e) {
 			console.error("Error loading markets", e);
@@ -99,8 +101,8 @@ function Dashboard() {
 	const loadData = async () => {
 		setLoading(true);
 		try {
-			const start = dateIsoToMsUtc(startDate);
-			const end = dateIsoToMsUtc(endDate) + 24 * 60 * 60 * 1000 - 1; // inclusive end of day
+			// const start = dateIsoToMsUtc(startDate);
+			// const end = dateIsoToMsUtc(endDate) + 24 * 60 * 60 * 1000 - 1; // inclusive end of day
 
 			let funding: PlatformData[] = [];
 
@@ -108,28 +110,24 @@ function Dashboard() {
 				console.log("Selected market ID:", selectedMarketId);
 
 				const baseSymbol = selectedMarketId.replace(/^(hl:|lt:)/, "");
-
-				const hlMarket = markets.find(
-					(m) => m.platform === "hyperliquid" && m.display === baseSymbol
-				);
-				const ltMarket = markets.find(
-					(m) => m.platform === "lighter" && m.display === baseSymbol
-				);
+				// const hlMarket = markets.filter((i) => markets[i] === selectedMarketId);
+				// console.log("Found HL market:", hlMarket);
+				// const ltMarket = markets.find(
+				// 	(m) => m.platform === "lighter" && m.display === baseSymbol
+				// );
 
 				const promises: Promise<FundingSeries>[] = [];
-				if (hlMarket) {
-					promises.push(
-						fetchFundingSeries("hyperliquid", hlMarket.display, start, end)
-					);
+				if (selectedMarketId) {
+					promises.push(fetchFundingSeries("hyperliquid", selectedMarketId));
 				}
-				if (ltMarket) {
-					const marketId = ltMarket.lighter?.market_id?.toString() || "";
-					promises.push(fetchFundingSeries("lighter", marketId, start, end));
+				if (selectedMarketId) {
+					// const marketId = ltMarket.lighter?.market_id?.toString() || "";
+					promises.push(fetchFundingSeries("lighter", selectedMarketId));
 				}
 
 				if (promises.length > 0) {
 					const seriesList = await Promise.allSettled(promises);
-
+					console.log("Fetched funding series:", seriesList);
 					const validSeries = seriesList
 						.filter(
 							(r): r is PromiseFulfilledResult<FundingSeries> =>
@@ -139,9 +137,10 @@ function Dashboard() {
 
 					funding = validSeries.map((s) => {
 						// Filter strictly within selected date range
-						const filteredPoints = s.points
-							.filter((p) => p.timestamp >= start && p.timestamp <= end)
-							.sort((a, b) => a.timestamp - b.timestamp);
+						const filteredPoints = s.points.sort(
+							(a, b) => a.timestamp - b.timestamp
+						);
+						// .filter((p) => p.timestamp >= start && p.timestamp <= end)
 
 						return {
 							name: s.platform,
@@ -175,12 +174,36 @@ function Dashboard() {
 		}
 	};
 	return (
-		<div className="min-h-screen bg-[#141414] flex">
-			<Sidebar />
-
-			<div className="flex-1 flex flex-col">
-				<Header />
-
+		<div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+			{markets.length === 0 ? (
+				<main className="flex-1 p-6 overflow-auto">
+					<div className="flex items-center justify-center h-64">
+						<div className="flex flex-col items-center">
+							<svg
+								className="animate-spin h-8 w-8 text-gray-400 mb-3"
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+							>
+								<circle
+									className="opacity-25"
+									cx="12"
+									cy="12"
+									r="10"
+									stroke="currentColor"
+									strokeWidth="4"
+								></circle>
+								<path
+									className="opacity-75"
+									fill="currentColor"
+									d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+								></path>
+							</svg>
+							<div className="text-gray-400">Loading markets...</div>
+						</div>
+					</div>
+				</main>
+			) : (
 				<main className="flex-1 p-6 overflow-auto">
 					<FilterBar
 						markets={markets}
@@ -195,7 +218,33 @@ function Dashboard() {
 
 					{loading ? (
 						<div className="flex items-center justify-center h-64">
-							<div className="text-gray-400">Loading...</div>
+							<div className="text-gray-400">
+								<div className="flex items-center justify-center h-64">
+									<div className="flex flex-col items-center">
+										<svg
+											className="animate-spin h-8 w-8 text-gray-400 mb-3"
+											xmlns="http://www.w3.org/2000/svg"
+											fill="none"
+											viewBox="0 0 24 24"
+										>
+											<circle
+												className="opacity-25"
+												cx="12"
+												cy="12"
+												r="10"
+												stroke="currentColor"
+												strokeWidth="4"
+											></circle>
+											<path
+												className="opacity-75"
+												fill="currentColor"
+												d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+											></path>
+										</svg>
+										<div className="text-gray-400">Loading charts...</div>
+									</div>
+								</div>
+							</div>
 						</div>
 					) : (
 						<>
@@ -204,26 +253,21 @@ function Dashboard() {
 									title="Funding Rate Comparison"
 									data={fundingData}
 									type="funding"
-									selectedDateRange={
-										startDate && endDate
-											? { start: startDate, end: endDate }
-											: undefined
-									}
+									market={selectedMarketId || ""}
 								/>
 							</div>
 
 							<div className="bg-[#1f1f1f] rounded-lg border border-gray-800 p-4">
-								<h3 className="text-white font-medium">Platform Comparison</h3>
-								<p className="text-gray-400 text-sm mt-2">
-									Compare funding rates between Hyperliquid and Lighter
-									platforms for the selected market and date range.
-								</p>
+								{/* <h3 className="text-white font-medium">Platform Comparison</h3> */}
+
+								<PlatformTable title="Platform Funding Comparison" />
 							</div>
 						</>
 					)}
 				</main>
-			</div>
+			)}
 		</div>
+		// </div>
 	);
 }
 

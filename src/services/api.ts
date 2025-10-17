@@ -77,84 +77,86 @@ export async function fetchLighterMarkets(): Promise<PlatformMarketOption[]> {
 
 export async function fetchFundingSeries(
 	platform: Platform,
-	symbolOrId: string,
-	startTimeMs: number,
-	endTimeMs?: number
+	symbolOrId: string
+	// startTimeMs: number,
+	// endTimeMs?: number
 ): Promise<FundingSeries> {
-	console.log("start end", startTimeMs, endTimeMs);
-	if (platform === "hyperliquid") {
-		const coin = symbolOrId; // coin symbol, e.g. 'ETH'
-		const body = {
-			type: "fundingHistory",
-			coin,
-			startTime: startTimeMs,
-			...(endTimeMs ? { endTime: endTimeMs } : {}),
-		} as const;
-		const resp = await fetch(HL_INFO_ENDPOINT, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(body),
-		});
-		if (!resp.ok) throw new Error("Failed to fetch Hyperliquid funding");
-		const json = await resp.json();
-		console.log("checking funding json", json);
-		const raw = (json?.funding ?? json ?? []) as any[];
-		const points = raw
-			.map((p: any) => {
-				const ts = Number(p?.time ?? p?.t ?? p?.timestamp ?? 0);
-				const timestamp = ts < 1e12 ? ts * 1000 : ts; // normalize to ms
-				const rate = p?.fundingRate ?? p?.rate ?? 0;
-				const value = (typeof rate === "number" ? rate : Number(rate)) * 100;
-				return { timestamp, value };
-			})
-			.sort((a, b) => a.timestamp - b.timestamp);
-		return { platform, market: coin, points };
-	}
-	console.log("Lighter funding request - symbolOrId:", symbolOrId);
-	// lighter
-	const [, idStr] = symbolOrId.includes(":")
-		? symbolOrId.split(":")
-		: ["lt", symbolOrId];
-	const marketId = Number(idStr);
-	console.log("Lighter market ID:", marketId);
-
-	const params = new URLSearchParams({
-		market_id: String(marketId),
-		resolution: "1h",
-		start_timestamp: String(Math.floor(startTimeMs / 1000)),
-		...(endTimeMs
-			? { end_timestamp: String(Math.floor(endTimeMs / 1000)) }
-			: {}),
-		count_back: "1000",
-	});
-
-	const url = `${LIGHTER_BASE}/fundings?${params.toString()}`;
-	console.log("Lighter API URL:", url);
-
-	const resp = await fetch(url);
-	if (!resp.ok) {
-		console.error("Lighter API error:", resp.status, resp.statusText);
-		throw new Error(
-			`Failed to fetch Lighter funding: ${resp.status} ${resp.statusText}`
-		);
-	}
+	// console.log("start end", startTimeMs, endTimeMs);
+	// if (platform === "hyperliquid") {
+	const coin = symbolOrId; // coin symbol, e.g. 'ETH'
+	const resp = await fetch(
+		`${
+			import.meta.env.VITE_FUNDING_API_URL
+		}/api/funding-rates/market-minutes?market=${symbolOrId}&dex=${platform}&minutes=1440`,
+		{
+			method: "GET",
+			headers: {
+				"X-Access-Key": import.meta.env.VITE_ACCESS_KEY,
+				"X-Secret-Key": import.meta.env.VITE_SECRET_KEY,
+			},
+		}
+	);
+	if (!resp.ok) throw new Error("Failed to fetch Hyperliquid funding");
 	const json = await resp.json();
-	console.log("Lighter funding response:", json);
-	const series = Array.isArray(json)
-		? json
-		: json?.fundings ?? json?.data ?? [];
-	console.log("Lighter series data:", series);
-	const points = series
+	console.log("checking funding json", json);
+	const raw = (json?.data ?? json ?? []) as any[];
+	const points = raw
 		.map((p: any) => {
-			const ts = Number(p?.timestamp ?? p?.time ?? 0);
-			const timestamp = ts < 1e12 ? ts * 1000 : ts; // normalize to ms
-			const rate = p?.rate ?? p?.fundingRate ?? 0;
+			const ts = p.timestamp;
+			const timestamp = p.timestamp; // normalize to ms
+			const rate = p?.annualized_rate ?? p?.rate ?? 0;
 			const value = typeof rate === "number" ? rate : Number(rate);
 			return { timestamp, value };
 		})
 		.sort((a, b) => a.timestamp - b.timestamp);
-	console.log("Lighter processed points:", points);
-	return { platform, market: String(marketId), points };
+	console.log("processed points", platform, coin, points);
+	return { platform, market: coin, points };
+	// }
+	// console.log("Lighter funding request - symbolOrId:", symbolOrId);
+	// // lighter
+	// const [, idStr] = symbolOrId.includes(":")
+	// 	? symbolOrId.split(":")
+	// 	: ["lt", symbolOrId];
+	// const marketId = Number(idStr);
+	// console.log("Lighter market ID:", marketId);
+
+	// const params = new URLSearchParams({
+	// 	market_id: String(marketId),
+	// 	resolution: "1h",
+	// 	start_timestamp: String(Math.floor(startTimeMs / 1000)),
+	// 	...(endTimeMs
+	// 		? { end_timestamp: String(Math.floor(endTimeMs / 1000)) }
+	// 		: {}),
+	// 	count_back: "1000",
+	// });
+
+	// const url = `${LIGHTER_BASE}/fundings?${params.toString()}`;
+	// console.log("Lighter API URL:", url);
+
+	// const resp = await fetch(url);
+	// if (!resp.ok) {
+	// 	console.error("Lighter API error:", resp.status, resp.statusText);
+	// 	throw new Error(
+	// 		`Failed to fetch Lighter funding: ${resp.status} ${resp.statusText}`
+	// 	);
+	// }
+	// const json = await resp.json();
+	// console.log("Lighter funding response:", json);
+	// const series = Array.isArray(json)
+	// 	? json
+	// 	: json?.fundings ?? json?.data ?? [];
+	// console.log("Lighter series data:", series);
+	// const points = series
+	// 	.map((p: any) => {
+	// 		const ts = Number(p?.timestamp ?? p?.time ?? 0);
+	// 		const timestamp = ts < 1e12 ? ts * 1000 : ts; // normalize to ms
+	// 		const rate = p?.rate ?? p?.fundingRate ?? 0;
+	// 		const value = typeof rate === "number" ? rate : Number(rate);
+	// 		return { timestamp, value };
+	// 	})
+	// 	.sort((a, b) => a.timestamp - b.timestamp);
+	// console.log("Lighter processed points:", points);
+	// return { platform, market: String(marketId), points };
 }
 
 export const fetchFundingRateData = async (

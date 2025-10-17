@@ -11,7 +11,7 @@ export default function App() {
 		<div>
 			<div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
 				<Routes>
-					<Route path="/dashboard" element={<Dashboard />} />
+					{/* <Route path="/dashboard" element={<Dashboard />} /> */}
 					<Route path="/" element={<Positions />} />
 					<Route path="/:address" element={<Positions />} />
 				</Routes>
